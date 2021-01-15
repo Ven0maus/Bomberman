@@ -1,14 +1,13 @@
-﻿using Bomberman.Client;
-using Bomberman.Client.GameObjects;
+﻿using Bomberman.Client.GameObjects;
 using Bomberman.Client.Graphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SadConsole;
 using System;
 
-namespace Bomberman
+namespace Bomberman.Client
 {
-    internal class Game
+    public class Game
     {
         public static GameClient Client { get; private set; }
 
@@ -53,14 +52,12 @@ namespace Bomberman
             Client.Update(gameTime);
         }
 
-        public static void GameOver()
+        public static void GameOver(Player player)
         {
-            Player.Instance.Alive = false;
+            player.Alive = false;
 
             // TODO: Wait for end of game by other players or until everyone left
             // Then go back to the lobby to ready up for a new game
-            // As is now: instantly restart game
-            Global.CurrentScreen = GridScreen = new GridScreen(GridWidth, GridHeight, Font);
         }
     }
 }

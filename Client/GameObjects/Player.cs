@@ -1,13 +1,13 @@
-﻿using Bomberman.Client.Graphics;
+﻿using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using SadConsole.Entities;
-using System;
 
 namespace Bomberman.Client.GameObjects
 {
     public class Player : Entity
     {
+        public int Id;
         // Powerups
         public int MaxBombs = 1;
         public int BombStrength = 1;
@@ -15,97 +15,122 @@ namespace Bomberman.Client.GameObjects
 
         public bool Alive;
 
-        public static Player Instance { get; private set; }
+        public bool RequestedMovement { get; set; }
 
-        internal Player(Point position) : base(Color.White, Color.Transparent, 18)
+        public bool _controllable;
+
+        public Player(Point position, int id, bool controllable = true) : base(Color.White, Color.Transparent, 18)
         {
+            Id = id;
+            _controllable = controllable;
             Alive = true;
             Position = position;
             Font = Game.Font;
-
-            IsFocused = true;
-
-            if (Instance != null)
-                Instance.Parent = null;
-            Instance = this;
+            Moved += Player_Moved;
+            IsFocused = _controllable;
         }
 
-        internal Player(int x, int y) : this(new Point(x, y))
-        { }
+        private void Player_Moved(object sender, EntityMovedEventArgs e)
+        {
+            var previous = e.FromPosition;
+            var current = Position;
+
+            int diffX = current.X - previous.X;
+            int diffY = current.Y - previous.Y;
+
+            // Right
+            if (diffX == 1 && diffY == 0)
+            {
+                if (Animation[0].Glyph != 16)
+                {
+                    Animation[0].Glyph = 16;
+                    Animation.IsDirty = true;
+                }
+            }
+            // Left
+            else if (diffX == -1 && diffY == 0)
+            {
+                if (Animation[0].Glyph != 17)
+                {
+                    Animation[0].Glyph = 17;
+                    Animation.IsDirty = true;
+                }
+            }
+            // Up
+            else if (diffX == 0 && diffY == -1)
+            {
+                if (Animation[0].Glyph != 19)
+                {
+                    Animation[0].Glyph = 19;
+                    Animation.IsDirty = true;
+                }
+            }
+            // Down
+            else if (diffX == 0 && diffY == 1)
+            {
+                if (Animation[0].Glyph != 18)
+                {
+                    Animation[0].Glyph = 18;
+                    Animation.IsDirty = true;
+                }
+            }
+        }
 
         public override bool ProcessKeyboard(SadConsole.Input.Keyboard info)
         {
+            if (!_controllable) return base.ProcessKeyboard(info);
             if (!Alive)
             {
                 IsFocused = false;
-                return true;
+                return base.ProcessKeyboard(info);
             }
 
             if (info.IsKeyPressed(Keys.Z) && Game.GridScreen.Grid.CanMove(Position.X, Position.Y - 1))
             {
-                Animation[0].Glyph = 19;
-                Position += new Point(0, -1);
-                Animation.IsDirty = true;
-                CheckPowerup();
+                if (!RequestedMovement)
+                {
+                    RequestedMovement = true;
+                    var targetPosition = Position + new Point(0, -1);
+                    PacketHandler.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}")).GetAwaiter().GetResult();
+                }
                 return true;
             }
             else if (info.IsKeyPressed(Keys.S) && Game.GridScreen.Grid.CanMove(Position.X, Position.Y + 1))
             {
-                Animation[0].Glyph = 18;
-                Position += new Point(0, 1);
-                Animation.IsDirty = true;
-                CheckPowerup();
+                if (!RequestedMovement)
+                {
+                    RequestedMovement = true;
+                    var targetPosition = Position + new Point(0, 1);
+                    PacketHandler.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}")).GetAwaiter().GetResult();
+                }
                 return true;
             }
             else if (info.IsKeyPressed(Keys.Q) && Game.GridScreen.Grid.CanMove(Position.X - 1, Position.Y))
             {
-                Animation[0].Glyph = 17;
-                Position += new Point(-1, 0);
-                Animation.IsDirty = true;
-                CheckPowerup();
+                if (!RequestedMovement)
+                {
+                    RequestedMovement = true;
+                    var targetPosition = Position + new Point(-1, 0);
+                    PacketHandler.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}")).GetAwaiter().GetResult();
+                }
                 return true;
             }
             else if (info.IsKeyPressed(Keys.D) && Game.GridScreen.Grid.CanMove(Position.X + 1, Position.Y))
             {
-                Animation[0].Glyph = 16;
-                Position += new Point(1, 0);
-                Animation.IsDirty = true;
-                CheckPowerup();
+                if (!RequestedMovement)
+                {
+                    RequestedMovement = true;
+                    var targetPosition = Position + new Point(1, 0);
+                    PacketHandler.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}")).GetAwaiter().GetResult();
+                }
                 return true;
             }
             else if (info.IsKeyPressed(Keys.Space) && BombsPlaced < MaxBombs)
             {
-                if (Game.GridScreen.Grid.PlaceBomb(Position, BombStrength))
-                    BombsPlaced += 1;
+                // TODO: place bomb by server
             }
 
             return base.ProcessKeyboard(info);
-        }
-
-        private void CheckPowerup()
-        {
-            var cell = Game.GridScreen.Grid.GetValue(Position.X, Position.Y);
-            if (cell.HasFire)
-            {
-                Game.GameOver();
-                return;
-            }
-
-            if (cell.PowerUp == PowerUp.None) return;
-
-            switch (cell.PowerUp)
-            {
-                case PowerUp.ExtraBomb:
-                    MaxBombs++;
-                    break;
-                case PowerUp.BombStrength:
-                    BombStrength++;
-                    break;
-            }
-
-            cell.PowerUp = PowerUp.None;
-            cell.Explored = true;
-            Game.GridScreen.IsDirty = true;
         }
     }
 }

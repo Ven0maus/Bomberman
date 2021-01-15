@@ -1,7 +1,9 @@
 ﻿using Bomberman.Client.ServerSide;
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -21,6 +23,7 @@ namespace Server
 
         private readonly System.Timers.Timer _heartbeatTimer;
         private bool _running;
+        private GameLogic.Game _game;
 
         private readonly Dictionary<TcpClient, HeartbeatCheck> _timeSinceLastHeartbeat;
 
@@ -186,6 +189,11 @@ namespace Server
                     case "heartbeat":
                         HandleHeartbeatPacket(client, packet);
                         break;
+                    case "move":
+                        var coords = packet.Message.Split(':');
+                        var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
+                        _game?.Move(client, position);
+                        break;
                     default:
                         Console.WriteLine("Unhandled packet: " + packet.ToString());
                         break;
@@ -226,6 +234,11 @@ namespace Server
 
             // Add client
             _timeSinceLastHeartbeat.Add(newClient, new HeartbeatCheck(newClient));
+
+            if (_clients.Any() && _game == null)
+                _game = new GameLogic.Game(_clients);
+            else if (_game != null)
+                _game.AddPlayer(newClient);
 
             // Send a welcome message
             string msg = "Welcome to the Bomberman Server.";

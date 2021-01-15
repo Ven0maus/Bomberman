@@ -8,7 +8,7 @@ namespace Bomberman.Client.GameObjects
     public class Grid
     {
         public readonly Tile[] Cells;
-        private readonly int _width, _height;
+        protected readonly int _width, _height;
 
         public readonly Dictionary<Point, Bomb> Bombs = new Dictionary<Point, Bomb>();
 
@@ -58,23 +58,19 @@ namespace Bomberman.Client.GameObjects
             return !Cells[y * _width + x].Explored;
         }
 
-        public bool PlaceBomb(Point position, int strength)
+        public virtual bool PlaceBomb(Player placedBy, Point position, int strength, int id)
         {
             if (Bombs.ContainsKey(position) || GetValue(position.X, position.Y).HasBomb) return false;
 
-            var bomb = new Bomb(position, 3f, strength)
-            {
-                Parent = Game.GridScreen
-            };
+            var bomb = new Bomb(placedBy, position, 3f, strength, id);
+
+            // Server-side doesn't have active grid screen
+            if (Game.GridScreen != null)
+                bomb.Parent = Game.GridScreen;
 
             Bombs.Add(position, bomb);
 
             return true;
-        }
-
-        public void PlaceBomb(int x, int y, int strength)
-        {
-            PlaceBomb(new Point(x, y), strength);
         }
 
         public bool CanMove(int x, int y)

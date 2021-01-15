@@ -1,8 +1,10 @@
-﻿using Bomberman.Client.ServerSide;
+﻿using Bomberman.Client.GameObjects;
+using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,11 +13,15 @@ namespace Bomberman.Client
 {
     public class GameClient
     {
-        private readonly TcpClient _client;
+        public readonly TcpClient Client;
+
         private readonly string _serverIp;
         private readonly int _serverPort;
 
-        public bool Connected { get { return _client.Connected; } }
+        private Player _player;
+        private readonly List<Player> _otherPlayers;
+
+        public bool Connected { get { return Client.Connected; } }
         public bool Running { get; private set; }
 
         private bool _clientRequestedDisconnect = false;
@@ -26,17 +32,18 @@ namespace Bomberman.Client
 
         public GameClient(string serverIp, int serverPort)
         {
-            _client = new TcpClient();
+            Client = new TcpClient();
             _serverIp = serverIp;
             _serverPort = serverPort;
+            _otherPlayers = new List<Player>();
             _commandHandlers = new Dictionary<string, Func<string, Task>>();
         }
 
         private void CleanupNetworkResources()
         {
-            if (_client.Connected)
-                _client.GetStream().Close();
-            _client.Close();
+            if (Client.Connected)
+                Client.GetStream().Close();
+            Client.Close();
         }
 
         public bool Connect()
@@ -44,7 +51,7 @@ namespace Bomberman.Client
             // Connect to the server
             try
             {
-                _client.Connect(_serverIp, _serverPort);
+                Client.Connect(_serverIp, _serverPort);
             }
             catch (SocketException se)
             {
@@ -52,16 +59,20 @@ namespace Bomberman.Client
             }
 
             // check that we've connected
-            if (_client.Connected)
+            if (Client.Connected)
             {
                 // Connected!
-                Console.WriteLine("Connected to the server at {0}.", _client.Client.RemoteEndPoint);
+                Console.WriteLine("Connected to the server at {0}.", Client.Client.RemoteEndPoint);
                 Running = true;
 
                 // Hook up some packet command handlers
                 _commandHandlers["bye"] = HandleBye;
                 _commandHandlers["message"] = HandleMessage;
                 _commandHandlers["heartbeat"] = HandleHeartbeat;
+                _commandHandlers["move"] = HandleMovement;
+                _commandHandlers["moveother"] = HandleMovementOther;
+                _commandHandlers["spawn"] = HandlePlayerInstantiation;
+                _commandHandlers["spawnother"] = HandleOtherInstantiation;
 
                 return true;
             }
@@ -72,6 +83,55 @@ namespace Bomberman.Client
             }
 
             return false;
+        }
+
+        private Task HandleMovementOther(string message)
+        {
+            var coords = message.Split(':');
+            var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
+            var id = int.Parse(coords[0]);
+            Console.WriteLine("Moving player " + id + " from " + _player.Position + " to " + position);
+            var p = _otherPlayers.FirstOrDefault(a => a.Id == id);
+            if (p != null)
+                p.Position = position;
+            return Task.CompletedTask;
+        }
+
+        private Task HandleOtherInstantiation(string message)
+        {
+            var coords = message.Split(':');
+            var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
+            _otherPlayers.Add(new Player(position, int.Parse(coords[0]), false)
+            {
+                Parent = Game.GridScreen
+            });
+            return Task.CompletedTask;
+        }
+
+        private Task HandlePlayerInstantiation(string message)
+        {
+            var coords = message.Split(':');
+            var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
+            _player = new Player(position, int.Parse(coords[0]), true)
+            {
+                Parent = Game.GridScreen
+            };
+            return Task.CompletedTask;
+        }
+
+        private Task HandleMovement(string message)
+        {
+            _player.RequestedMovement = false;
+            if (message == "bad entry")
+            {
+                return Task.CompletedTask;
+            }
+
+            var coords = message.Split(':');
+            var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
+            Console.WriteLine("Moving player from " + _player.Position + " to " + position);
+            _player.Position = position;
+            return Task.CompletedTask;
         }
 
         private Task HandleBye(string message)
@@ -97,7 +157,7 @@ namespace Bomberman.Client
         {
             _timeSinceLastHeartbeat = 0f;
             Console.WriteLine("Received heartbeat request: " + message);
-            await PacketHandler.SendPacket(_client, new Packet("heartbeat", "yes"));
+            await PacketHandler.SendPacket(Client, new Packet("heartbeat", "yes"));
             Console.WriteLine("Send heartbeat response: yes");
         }
 
@@ -111,7 +171,7 @@ namespace Bomberman.Client
             catch(SocketException)
             {
                 // Make sure that we didn't have a graceless disconnect
-                if (IsDisconnected(_client) && !_clientRequestedDisconnect)
+                if (IsDisconnected(Client) && !_clientRequestedDisconnect)
                 {
                     Running = false;
                     Console.WriteLine("The server has disconnected from us ungracefully. :[");
@@ -120,7 +180,7 @@ namespace Bomberman.Client
             catch (IOException)
             {
                 // Make sure that we didn't have a graceless disconnect
-                if (IsDisconnected(_client) && !_clientRequestedDisconnect)
+                if (IsDisconnected(Client) && !_clientRequestedDisconnect)
                 {
                     Running = false;
                     Console.WriteLine("The server has disconnected from us ungracefully. :[");
@@ -138,7 +198,7 @@ namespace Bomberman.Client
             if (Running)
             {
                 // Check for new packets
-                tasks.Add(PacketHandler.ReceivePackets(_client, Dispatcher));
+                tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher));
                 tasks.RemoveAll(a => a.IsCompleted);
 
                 _timeSinceLastHeartbeat += gameTime.ElapsedGameTime.Milliseconds;
@@ -146,7 +206,7 @@ namespace Bomberman.Client
                 {
                     _timeSinceLastHeartbeat = 0;
                     // Make sure that we didn't have a graceless disconnect
-                    if (IsDisconnected(_client) && !_clientRequestedDisconnect)
+                    if (IsDisconnected(Client) && !_clientRequestedDisconnect)
                     {
                         Running = false;
                         Console.WriteLine("The server has disconnected from us ungracefully. :[");
@@ -187,7 +247,7 @@ namespace Bomberman.Client
             Console.WriteLine("Disconnecting from the server...");
             Running = false;
             _clientRequestedDisconnect = true;
-            PacketHandler.SendPacket(_client, new Packet("bye")).GetAwaiter().GetResult();
+            PacketHandler.SendPacket(Client, new Packet("bye")).GetAwaiter().GetResult();
         }
     }
 }

@@ -1,82 +1,51 @@
-﻿using Bomberman.Client.Graphics;
+﻿using Bomberman.Client.GameObjects;
+using Bomberman.Client.Graphics;
 using Microsoft.Xna.Framework;
-using SadConsole.Entities;
-using System;
 using System.Collections.Generic;
+using System.Timers;
 
-namespace Bomberman.Client.GameObjects
+namespace Server.GameLogic
 {
-    public class Bomb : Entity
+    internal class BombContext
     {
         public int Id;
-        protected readonly int _strength;
-        private readonly Grid _grid;
 
-        private float _currentTime = 0;
+        private readonly GridContext _grid;
+        private readonly Timer _bombTimer;
+        private readonly PlayerContext _placedBy;
 
-        protected float _bombTime;
-        protected bool _detonated = false;
-        protected bool _done = false;
+        private float _bombTime;
+        private readonly float _strength;
+        private bool _done, _detonated;
+
+        public Point Position { get; set; }
+
+        public BombContext(GridContext grid, PlayerContext player, Point position, float time, int strength) 
+        {
+            _placedBy = player;
+            _grid = grid;
+            _bombTime = time;
+            _strength = strength;
+            Position = position;
+            _bombTimer = new Timer(_bombTime);
+            _bombTimer.Elapsed += BombTimer_Elapsed;
+        }
+
+        private void BombTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            if (_done)
+            {
+                _bombTimer.Stop();
+                return;
+            }
+
+            if (!_detonated)
+                Detonate();
+            else
+                CleanupFireAfter();
+        }
 
         private List<Point> _cellPositions;
-
-        protected readonly Player _placedBy;
-
-        public Bomb(Player placedBy, Point position, float bombTime, int strength, int id) : base(Color.White, Color.Transparent, 3)
-        {
-            Id = id;
-            Position = position;
-            Font = Game.Font;
-            _placedBy = placedBy;
-            _strength = strength;
-            _grid = Game.GridScreen.Grid;
-            _grid.GetValue(position.X, position.Y).HasBomb = true;
-            _bombTime = bombTime * 1000;
-        }
-
-        public override void Update(TimeSpan timeElapsed)
-        {
-            if (_done) return;
-            _currentTime += timeElapsed.Milliseconds;
-            if (_currentTime >= _bombTime)
-            {
-                if (!_detonated)
-                    Detonate();
-                else
-                    CleanupFireAfter();
-            }
-        }
-
-        protected virtual void CleanupFireAfter()
-        {
-            _done = true;
-
-            var cellPositions = GetCellPositions();
-
-            // Remove fire cells
-            foreach (var pos in cellPositions)
-            {
-                var cell = _grid.GetValue(pos.X, pos.Y);
-                _grid.Explore(cell.Position.X, cell.Position.Y);
-
-                if (!cell.ContainsFireFrom.Contains(Id) || cell.ContainsFireFrom.Count > 1)
-                {
-                    cell.ContainsFireFrom.Remove(Id);
-                    continue; // Let other bomb handle this one
-                }
-
-                // Spawn powerup
-                if (cell.PowerUp != PowerUp.None)
-                {
-                    cell.Glyph = cell.PowerUp == PowerUp.ExtraBomb ? 5 : 6;
-                    cell.Foreground = Color.White;
-                }
-            }
-
-            Game.GridScreen.IsDirty = true;
-            Parent = null;
-        }
-
         public List<Point> GetCellPositions()
         {
             if (_cellPositions != null) return _cellPositions;
@@ -125,14 +94,38 @@ namespace Bomberman.Client.GameObjects
             return _cellPositions = cells;
         }
 
-        public virtual void Detonate()
+        protected void CleanupFireAfter()
         {
-            _detonated = true;
-            _currentTime = 0;
-            _bombTime = 1250; // Time for cleanup
+            _done = true;
 
-            Animation[0].Foreground = Color.Transparent;
-            Animation.IsDirty = true;
+            var cellPositions = GetCellPositions();
+
+            // Remove fire cells
+            foreach (var pos in cellPositions)
+            {
+                var cell = _grid.GetValue(pos.X, pos.Y);
+                _grid.Explore(cell.Position.X, cell.Position.Y);
+
+                if (!cell.ContainsFireFrom.Contains(Id) || cell.ContainsFireFrom.Count > 1)
+                {
+                    cell.ContainsFireFrom.Remove(Id);
+                    continue; // Let other bomb handle this one
+                }
+
+                // Spawn powerup
+                if (cell.PowerUp != PowerUp.None)
+                {
+                    // TODO: Tell client to spawn a powerup on this tile
+                }
+            }
+        }
+
+        public void Detonate()
+        {
+            // Time for cleanup
+            _detonated = true;
+            _bombTime = 1250;
+            _bombTimer.Interval = _bombTime;
 
             // Remove from bombs collection
             _grid.GetValue(Position.X, Position.Y).HasBomb = false;
@@ -147,7 +140,7 @@ namespace Bomberman.Client.GameObjects
                 // Game over, kill player
                 if (_placedBy.Position == pos)
                 {
-                    Game.GameOver(_placedBy);
+                    // TODO: Disable player until game is over
                 }
 
                 var cell = _grid.GetValue(pos.X, pos.Y);
@@ -157,8 +150,6 @@ namespace Bomberman.Client.GameObjects
                     cell.PowerUp = PowerUp.None;
 
                 // Set cell on fire
-                cell.Glyph = 4;
-                cell.Foreground = Color.White;
                 cell.ContainsFireFrom.Add(Id);
 
                 if (cell.HasBomb)
@@ -168,7 +159,7 @@ namespace Bomberman.Client.GameObjects
                 }
             }
 
-            Game.GridScreen.IsDirty = true;
+            // TODO: Send detonation cells to client
         }
     }
 }

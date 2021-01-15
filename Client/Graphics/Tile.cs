@@ -32,8 +32,8 @@ namespace Bomberman.Client.Graphics
 
         public bool HasFire { get { return Glyph == 4; } }
 
-        private List<Bomb> _containsFireFrom;
-        public List<Bomb> ContainsFireFrom { get { return _containsFireFrom ??= new List<Bomb>(); } }
+        private List<int> _containsFireFrom;
+        public List<int> ContainsFireFrom { get { return _containsFireFrom ??= new List<int>(); } }
 
         public bool HasBomb;
 
@@ -48,12 +48,6 @@ namespace Bomberman.Client.Graphics
             _explored = !destroyable;
             Glyph = destroyable ? 2 : 1;
             Background = Color.DarkBlue;
-
-            // Small chance to contain a random powerup
-            if (Game.Random.Next(0, 101) <= 15)
-            {
-                PowerUp = (PowerUp)Game.Random.Next(1, 3);
-            }
         }
 
         public Tile(int x, int y, bool destroyable = true) : this(new Point(x, y), destroyable)
