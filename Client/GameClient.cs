@@ -6,8 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Bomberman.Client
@@ -38,6 +38,32 @@ namespace Bomberman.Client
             _serverPort = serverPort;
             _otherPlayers = new List<Player>();
             _commandHandlers = new Dictionary<string, Func<string, Task>>();
+        }
+
+        public async void SendPacket(TcpClient client, Packet packet)
+        {
+            try
+            {
+                await PacketHandler.SendPacket(client, packet, false);
+            }
+            catch (ProtocolViolationException)
+            {
+                // Bad packet?
+            }
+            catch (ObjectDisposedException)
+            {
+                Running = false;
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine("SocketException: " + e.ToString());
+                Running = false;
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine("IOException: " + e.ToString());
+                Running = false;
+            }
         }
 
         private void CleanupNetworkResources()
@@ -261,12 +287,13 @@ namespace Bomberman.Client
         }
 
         // Just prints out a message sent from the server
-        private async Task HandleHeartbeat(string message)
+        private Task HandleHeartbeat(string message)
         {
             _timeSinceLastHeartbeat = 0f;
             Console.WriteLine("Received heartbeat request: " + message);
-            await PacketHandler.SendPacket(Client, new Packet("heartbeat", "yes"));
+            SendPacket(Client, new Packet("heartbeat", "yes"));
             Console.WriteLine("Send heartbeat response: yes");
+            return Task.CompletedTask;
         }
 
         private void Dispatcher(TcpClient client, Packet packet)
@@ -296,9 +323,11 @@ namespace Bomberman.Client
             }
         }
 
+        private double _timeSinceLastReceive = 0;
         // Main loop for the Games Client
         public void Update(GameTime gameTime)
         {
+            _timeSinceLastReceive += gameTime.ElapsedGameTime.Milliseconds;
             bool wasRunning = Running;
 
             var tasks = new List<Task>();
@@ -306,7 +335,11 @@ namespace Bomberman.Client
             if (Running)
             {
                 // Check for new packets
-                tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher));
+                if (_timeSinceLastReceive > 20)
+                {
+                    tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher, false));
+                    _timeSinceLastReceive = 0;
+                }
                 tasks.RemoveAll(a => a.IsCompleted);
 
                 _timeSinceLastHeartbeat += gameTime.ElapsedGameTime.Milliseconds;
@@ -322,10 +355,10 @@ namespace Bomberman.Client
                 }
             }
 
+            if (Running) return;
+
             // Finish tasks if any where still added
             Task.WaitAll(tasks.ToArray(), 1000);
-
-            if (Running) return;
 
             // Cleanup
             CleanupNetworkResources();
@@ -333,11 +366,11 @@ namespace Bomberman.Client
                 Console.WriteLine("Disconnected from the server.");
         }
 
-        private static bool IsDisconnected(TcpClient client)
+        private bool IsDisconnected(TcpClient client)
         {
             try
             {
-                PacketHandler.SendPacket(client, null).GetAwaiter().GetResult();
+                SendPacket(client, null);
             }
             catch (IOException)
             {
@@ -355,7 +388,7 @@ namespace Bomberman.Client
             Console.WriteLine("Disconnecting from the server...");
             Running = false;
             _clientRequestedDisconnect = true;
-            PacketHandler.SendPacket(Client, new Packet("bye")).GetAwaiter().GetResult();
+            SendPacket(Client, new Packet("bye"));
         }
     }
 }

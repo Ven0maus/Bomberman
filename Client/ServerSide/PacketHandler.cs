@@ -9,7 +9,7 @@ namespace Bomberman.Client.ServerSide
     {
         private const int MaxPacketSize = 1024;
 
-        public static async Task SendPacket(TcpClient client, Packet packet)
+        public static async Task SendPacket(TcpClient client, Packet packet, bool server)
         {
             try
             {
@@ -21,13 +21,13 @@ namespace Bomberman.Client.ServerSide
             }
             catch (Exception e)
             {
-                Console.WriteLine("There was an issue receiving a packet.");
+                Console.WriteLine($"There was an issue sending a packet to the {(server ? "Server" : "Client")}.");
                 Console.WriteLine("Reason: {0}", e.Message);
                 throw;
             }
         }
 
-        public static async Task ReceivePackets(TcpClient client, Action<TcpClient, Packet> action)
+        public static async Task ReceivePackets(TcpClient client, Action<TcpClient, Packet> action, bool server)
         {
             try
             {
@@ -61,7 +61,7 @@ namespace Bomberman.Client.ServerSide
             catch (Exception e)
             {
                 // There was an issue in receiving
-                Console.WriteLine("There was an issue sending a packet to {0}.", client.Client.RemoteEndPoint);
+                Console.WriteLine("There was an issue receiving a packet from the {0} [{1}].", server ? "Server" : "Client", client.Client.RemoteEndPoint);
                 Console.WriteLine("Reason: {0}", e.Message);
                 throw;
             }

@@ -96,7 +96,7 @@ namespace Server.GameLogic
             return null;
         }
 
-        public async void Move(TcpClient client, Point position)
+        public void Move(TcpClient client, Point position)
         {
             var player = GetPlayer(client);
             if (player == null)
@@ -144,7 +144,7 @@ namespace Server.GameLogic
             Context.CheckPowerup(player, client);
         }
 
-        public async void PlaceBomb(TcpClient client)
+        public void PlaceBomb(TcpClient client)
         {
             var player = GetPlayer(client);
             if (player == null) return;

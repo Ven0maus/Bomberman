@@ -92,7 +92,7 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestedMovement = true;
                     var targetPosition = Position + new Point(0, -1);
-                    PacketHandler.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}")).GetAwaiter().GetResult();
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}"));
                 }
                 return true;
             }
@@ -102,7 +102,7 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestedMovement = true;
                     var targetPosition = Position + new Point(0, 1);
-                    PacketHandler.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}")).GetAwaiter().GetResult();
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}"));
                 }
                 return true;
             }
@@ -112,7 +112,7 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestedMovement = true;
                     var targetPosition = Position + new Point(-1, 0);
-                    PacketHandler.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}")).GetAwaiter().GetResult();
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}"));
                 }
                 return true;
             }
@@ -122,7 +122,7 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestedMovement = true;
                     var targetPosition = Position + new Point(1, 0);
-                    PacketHandler.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}")).GetAwaiter().GetResult();
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}"));
                 }
                 return true;
             }
@@ -131,7 +131,7 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestBombPlacement)
                 {
                     RequestBombPlacement = true;
-                    PacketHandler.SendPacket(Game.Client.Client, new Packet("placebomb")).GetAwaiter().GetResult();
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("placebomb"));
                 }
                 return true;
             }

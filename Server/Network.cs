@@ -67,9 +67,9 @@ namespace Server
         {
             try
             {
-                await PacketHandler.SendPacket(client, packet);
+                await PacketHandler.SendPacket(client, packet, true);
             }
-            catch (ObjectDisposedException e)
+            catch (ObjectDisposedException)
             {
                 HandleDisconnectedClient(client);
             }
@@ -168,7 +168,7 @@ namespace Server
                 {
                     try
                     {
-                        tasks.Add(PacketHandler.ReceivePackets(client, HandlePacket));
+                        tasks.Add(PacketHandler.ReceivePackets(client, HandlePacket, true));
                     }
                     catch (SocketException)
                     {

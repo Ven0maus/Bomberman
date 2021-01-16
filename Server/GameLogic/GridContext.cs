@@ -31,7 +31,7 @@ namespace Server.GameLogic
             return true;
         }
 
-        public async void CheckPowerup(PlayerContext player, TcpClient client)
+        public void CheckPowerup(PlayerContext player, TcpClient client)
         {
             var position = player.Position;
             var cell = GetValue(position.X, position.Y);
