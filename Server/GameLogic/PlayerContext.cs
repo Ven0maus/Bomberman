@@ -14,6 +14,8 @@ namespace Server.GameLogic
 
         public readonly TcpClient Client;
 
+        public bool Alive;
+
         public PlayerContext(TcpClient client, Point position, int id)
         {
             Client = client;

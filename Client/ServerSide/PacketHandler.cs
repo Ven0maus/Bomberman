@@ -15,7 +15,7 @@ namespace Bomberman.Client.ServerSide
             {
                 // convert JSON to buffer and its length to a 16 bit unsigned integer buffer
                 byte[] jsonBuffer = packet != null ? PacketProtocol.WrapMessage(Encoding.UTF8.GetBytes(packet.ToJson())) : PacketProtocol.WrapKeepaliveMessage();
-
+                Console.WriteLine("Packet size: " + jsonBuffer.Length);
                 // Send the packet
                 await client.GetStream().WriteAsync(jsonBuffer, 0, jsonBuffer.Length);
             }

@@ -115,11 +115,12 @@ namespace Bomberman.Client
             int bombId = int.Parse(data[0]);
             var bomb = _bombsPlaced.FirstOrDefault(a => a.Id == bombId);
             data.RemoveAt(0);
+            if (data.Count == 1 && string.IsNullOrEmpty(data[0])) return Task.CompletedTask;
             var positions = data.Select(a =>
             {
                 var coords = a.Split(',');
                 if (!int.TryParse(coords[0], out int x) || !int.TryParse(coords[1], out int y))
-                    throw new Exception("Invalid coordinates: " + a);
+                    throw new Exception("Invalid coordinates phase2: [" + a + "] | Message: " + message);
                 return new Point(x, y);
             }).ToList();
             if (bomb != null)
@@ -146,11 +147,12 @@ namespace Bomberman.Client
             }
 
             data.RemoveAt(0);
+            if (data.Count == 1 && string.IsNullOrEmpty(data[0])) return Task.CompletedTask;
             var positions = data.Select(a =>
             {
                 var coords = a.Split(',');
                 if (!int.TryParse(coords[0], out int x) || !int.TryParse(coords[1], out int y))
-                    throw new Exception("Invalid coordinates: " + a);
+                    throw new Exception("Invalid coordinates phase1: [" + a + "] | Message: " + message);
                 return new Point(x, y);
             }).ToList();
 

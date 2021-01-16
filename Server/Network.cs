@@ -1,5 +1,6 @@
 ﻿using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
+using Server.GameLogic;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,12 +14,15 @@ namespace Server
 {
     public class Network
     {
+        public static Network Instance { get; private set; }
+
         private const float HeartbeatInterval = 10f;
 
         private readonly string _serverIp;
         private readonly int _serverPort;
         private readonly TcpListener _listener;
         private readonly List<TcpClient> _clients;
+        private Dictionary<TcpClient, PlayerContext> _players;
         private readonly int _maxPlayers;
 
         private readonly System.Timers.Timer _heartbeatTimer;
@@ -44,7 +48,7 @@ namespace Server
             {
                 HasBeenSend = true;
                 Time = DateTime.Now;
-                SendHeartbeat(_client).GetAwaiter().GetResult();
+                SendHeartbeat(_client);
             }
 
             public void Reset()
@@ -53,17 +57,38 @@ namespace Server
                 Time = DateTime.Now;
             }
 
-            private async Task SendHeartbeat(TcpClient client)
+            private void SendHeartbeat(TcpClient client)
             {
-                await PacketHandler.SendPacket(client, new Packet("heartbeat", "Are you alive?"));
+                Instance.SendPacket(client, new Packet("heartbeat", "Are you alive?"));
+            }
+        }
 
-                // Give client time to process
-                Thread.Sleep(50);
+        public async void SendPacket(TcpClient client, Packet packet)
+        {
+            try
+            {
+                await PacketHandler.SendPacket(client, packet);
+            }
+            catch (ObjectDisposedException e)
+            {
+                HandleDisconnectedClient(client);
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine("SocketException: " + e.ToString());
+                HandleDisconnectedClient(client);
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine("IOException: " + e.ToString());
+                HandleDisconnectedClient(client);
             }
         }
 
         public Network(string serverIp, int serverPort, int maxPlayers)
         {
+            Instance = this;
+
             _serverIp = serverIp;
             _serverPort = serverPort;
             _maxPlayers = maxPlayers;
@@ -76,6 +101,7 @@ namespace Server
             _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
         }
 
+        private readonly List<TcpClient> _clientsToRemoveFromHeartbeatMonitoring = new List<TcpClient>();
         private void HeartbeatTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             if (!_running)
@@ -86,30 +112,25 @@ namespace Server
 
             foreach (var client in _timeSinceLastHeartbeat)
             {
-                try
+                if (!_clients.Contains(client.Key)) continue;
+                var heartbeatCheck = _timeSinceLastHeartbeat[client.Key];
+                if (heartbeatCheck.Time.AddMilliseconds(HeartbeatInterval * 1000) <= DateTime.Now)
                 {
-                    if (!_clients.Contains(client.Key)) continue;
-                    var heartbeatCheck = _timeSinceLastHeartbeat[client.Key];
-                    if (heartbeatCheck.Time.AddMilliseconds(HeartbeatInterval * 1000) <= DateTime.Now)
+                    if (!heartbeatCheck.HasBeenSend)
+                        heartbeatCheck.Send();
+                    else
                     {
-                        if (!heartbeatCheck.HasBeenSend)
-                            heartbeatCheck.Send();
-                        else
-                        {
-                            Console.WriteLine("Client ["+client.Key.Client.RemoteEndPoint+"] did not respond to heartbeat check in time, closing down client resources.");
-                            HandleDisconnectedClient(client.Key);
-                        }
+                        Console.WriteLine("Client [" + client.Key.Client.RemoteEndPoint + "] did not respond to heartbeat check in time, closing down client resources.");
+                        _clientsToRemoveFromHeartbeatMonitoring.Add(client.Key);
                     }
                 }
-                catch (SocketException)
-                {
-                    HandleDisconnectedClient(client.Key);
-                }
-                catch (IOException)
-                {
-                    HandleDisconnectedClient(client.Key);
-                }
             }
+
+            foreach (var client in _clientsToRemoveFromHeartbeatMonitoring)
+            {
+                HandleDisconnectedClient(client);
+            }
+            _clientsToRemoveFromHeartbeatMonitoring.Clear();
         }
 
         public void Shutdown()
@@ -143,7 +164,7 @@ namespace Server
                 }
 
                 // Check game logic steps
-                foreach (var client in _clients)
+                foreach (var client in _clients.ToList())
                 {
                     try
                     {
@@ -199,6 +220,7 @@ namespace Server
                         break;
                     case "placebomb":
                         _game?.PlaceBomb(client);
+                        Console.WriteLine("Client attempted to place a bomb.");
                         break;
                     default:
                         Console.WriteLine("Unhandled packet: " + packet.ToString());
@@ -239,25 +261,13 @@ namespace Server
             _timeSinceLastHeartbeat.Add(newClient, new HeartbeatCheck(newClient));
 
             if (_clients.Any() && _game == null)
-                _game = new GameLogic.Game(_clients);
+                _game = new GameLogic.Game(_clients, out _players);
             else if (_game != null)
                 _game.AddPlayer(newClient);
 
             // Send a welcome message
             string msg = "Welcome to the Bomberman Server.";
-
-            try
-            {
-                await PacketHandler.SendPacket(newClient, new Packet("message", msg));
-            }
-            catch(SocketException)
-            {
-                HandleDisconnectedClient(newClient);
-            }
-            catch (IOException)
-            {
-                HandleDisconnectedClient(newClient);
-            }
+            SendPacket(newClient, new Packet("message", msg));
         }
 
         // Will attempt to gracefully disconnect a TcpClient
@@ -269,21 +279,10 @@ namespace Server
             if (message == "")
                 message = "Goodbye.";
 
-            try
-            {
-                // Send the "bye," message
-                var byePacket = PacketHandler.SendPacket(client, new Packet("bye", message));
-                Thread.Sleep(100);
-                byePacket.GetAwaiter().GetResult();
-            }
-            catch(IOException)
-            {
+            SendPacket(client, new Packet("bye", message));
 
-            }
-            catch (SocketException)
-            {
-
-            }
+            // Let packed be processed by client
+            Thread.Sleep(50);
 
             // Cleanup resources on our end
             HandleDisconnectedClient(client);
@@ -293,11 +292,15 @@ namespace Server
         // gracefully or not.  Will remove them from clint list and lobby
         public void HandleDisconnectedClient(TcpClient client)
         {
+            // We already handled this client, this call came from lingering packets
+            if (!_clients.Contains(client)) return;
+
             Console.WriteLine("Client lost connection.");
 
             // Remove from collections and free resources
             _timeSinceLastHeartbeat.Remove(client);
             _clients.Remove(client);
+            _players?.Remove(client);
             CleanupClient(client);
         }
 

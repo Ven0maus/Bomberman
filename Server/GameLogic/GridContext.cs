@@ -52,14 +52,14 @@ namespace Server.GameLogic
 
             cell.PowerUp = PowerUp.None;
 
-            await PacketHandler.SendPacket(client, new Packet("pickuppowerup", $"{position.X}:{position.Y}"));
+            Network.Instance.SendPacket(client, new Packet("pickuppowerup", $"{position.X}:{position.Y}"));
 
             // Tell all other clients that the powerup was picked up!
             foreach (var p in _game.Players)
             {
                 if (p.Key != client)
                 {
-                    await PacketHandler.SendPacket(p.Key, new Packet("pickuppowerup", $"{position.X}:{position.Y}"));
+                    Network.Instance.SendPacket(p.Key, new Packet("pickuppowerup", $"{position.X}:{position.Y}"));
                 }
             }
         }
