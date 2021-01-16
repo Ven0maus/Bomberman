@@ -16,6 +16,7 @@ namespace Bomberman.Client.GameObjects
         public bool Alive;
 
         public bool RequestedMovement { get; set; }
+        public bool RequestBombPlacement { get; set; }
 
         public bool _controllable;
 
@@ -85,7 +86,7 @@ namespace Bomberman.Client.GameObjects
                 return base.ProcessKeyboard(info);
             }
 
-            if (info.IsKeyPressed(Keys.Z) && Game.GridScreen.Grid.CanMove(Position.X, Position.Y - 1))
+            if (info.IsKeyPressed(Keys.Z))
             {
                 if (!RequestedMovement)
                 {
@@ -95,7 +96,7 @@ namespace Bomberman.Client.GameObjects
                 }
                 return true;
             }
-            else if (info.IsKeyPressed(Keys.S) && Game.GridScreen.Grid.CanMove(Position.X, Position.Y + 1))
+            else if (info.IsKeyPressed(Keys.S))
             {
                 if (!RequestedMovement)
                 {
@@ -105,7 +106,7 @@ namespace Bomberman.Client.GameObjects
                 }
                 return true;
             }
-            else if (info.IsKeyPressed(Keys.Q) && Game.GridScreen.Grid.CanMove(Position.X - 1, Position.Y))
+            else if (info.IsKeyPressed(Keys.Q))
             {
                 if (!RequestedMovement)
                 {
@@ -115,7 +116,7 @@ namespace Bomberman.Client.GameObjects
                 }
                 return true;
             }
-            else if (info.IsKeyPressed(Keys.D) && Game.GridScreen.Grid.CanMove(Position.X + 1, Position.Y))
+            else if (info.IsKeyPressed(Keys.D))
             {
                 if (!RequestedMovement)
                 {
@@ -125,9 +126,14 @@ namespace Bomberman.Client.GameObjects
                 }
                 return true;
             }
-            else if (info.IsKeyPressed(Keys.Space) && BombsPlaced < MaxBombs)
+            else if (info.IsKeyPressed(Keys.Space))
             {
-                // TODO: place bomb by server
+                if (!RequestBombPlacement)
+                {
+                    RequestBombPlacement = true;
+                    PacketHandler.SendPacket(Game.Client.Client, new Packet("placebomb")).GetAwaiter().GetResult();
+                }
+                return true;
             }
 
             return base.ProcessKeyboard(info);

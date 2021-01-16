@@ -1,4 +1,5 @@
 ﻿using Bomberman.Client.GameObjects;
+using Bomberman.Client.Graphics;
 using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
 using System;
@@ -73,6 +74,12 @@ namespace Bomberman.Client
                 _commandHandlers["moveother"] = HandleMovementOther;
                 _commandHandlers["spawn"] = HandlePlayerInstantiation;
                 _commandHandlers["spawnother"] = HandleOtherInstantiation;
+                _commandHandlers["placebomb"] = HandleBombPlacement;
+                _commandHandlers["placebombother"] = HandleBombPlacementOther;
+                _commandHandlers["detonatePhase1"] = HandleDetonationPhase1;
+                _commandHandlers["detonatePhase2"] = HandleDetonationPhase2;
+                _commandHandlers["spawnpowerup"] = HandlePowerupSpawn;
+                _commandHandlers["pickuppowerup"] = HandlePowerupPickup;
 
                 return true;
             }
@@ -85,12 +92,112 @@ namespace Bomberman.Client
             return false;
         }
 
+        private Task HandlePowerupPickup(string message)
+        {
+            var data = message.Split(':');
+            var position = new Point(int.Parse(data[0]), int.Parse(data[1]));
+            Game.GridScreen.Grid.DeletePowerUp(position);
+            return Task.CompletedTask;
+        }
+
+        private Task HandlePowerupSpawn(string message)
+        {
+            var data = message.Split(':');
+            var position = new Point(int.Parse(data[0]), int.Parse(data[1]));
+            PowerUp powerUpType = (PowerUp)int.Parse(data[2]);
+            Game.GridScreen.Grid.SpawnPowerUp(position, powerUpType);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleDetonationPhase2(string message)
+        {
+            var data = message.Split(':').ToList();
+            int bombId = int.Parse(data[0]);
+            var bomb = _bombsPlaced.FirstOrDefault(a => a.Id == bombId);
+            data.RemoveAt(0);
+            var positions = data.Select(a =>
+            {
+                var coords = a.Split(',');
+                if (!int.TryParse(coords[0], out int x) || !int.TryParse(coords[1], out int y))
+                    throw new Exception("Invalid coordinates: " + a);
+                return new Point(x, y);
+            }).ToList();
+            if (bomb != null)
+            {
+                bomb.CleanupFireAfter(positions);
+                _bombsPlaced.Remove(bomb);
+            }
+            return Task.CompletedTask;
+        }
+
+        private Task HandleDetonationPhase1(string message)
+        {
+            var data = message.Split(':').ToList();
+            var bombIds = data[0].Split(',');
+            var ids = bombIds.Select(int.Parse);
+            
+            foreach (var bombId in ids)
+            {
+                var bomb = _bombsPlaced.FirstOrDefault(a => a.Id == bombId);
+                if (bomb != null)
+                {
+                    bomb.Detonate();
+                }
+            }
+
+            data.RemoveAt(0);
+            var positions = data.Select(a =>
+            {
+                var coords = a.Split(',');
+                if (!int.TryParse(coords[0], out int x) || !int.TryParse(coords[1], out int y))
+                    throw new Exception("Invalid coordinates: " + a);
+                return new Point(x, y);
+            }).ToList();
+
+            Game.GridScreen.Grid.BombDetonationPhase1(positions);
+
+            return Task.CompletedTask;
+        }
+
+        private Task HandleBombPlacementOther(string message)
+        {
+            var coords = message.Split(':');
+            var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
+            var player = _otherPlayers.FirstOrDefault(a => a.Id == int.Parse(coords[4]));
+            if (player != null)
+            {
+                var bomb = new Bomb(player, position, int.Parse(coords[2]), int.Parse(coords[3]))
+                {
+                    Parent = Game.GridScreen
+                };
+                _bombsPlaced.Add(bomb);
+            }
+            return Task.CompletedTask;
+        }
+
+        private readonly List<Bomb> _bombsPlaced = new List<Bomb>();
+        private Task HandleBombPlacement(string message)
+        {
+            _player.RequestBombPlacement = false;
+            if (message == "bad entry")
+            {
+                return Task.CompletedTask;
+            }
+            var coords = message.Split(':');
+            var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
+            var bomb = new Bomb(_player, position, int.Parse(coords[2]), int.Parse(coords[3]))
+            {
+                Parent = Game.GridScreen
+            };
+            _bombsPlaced.Add(bomb);
+            return Task.CompletedTask;
+        }
+
         private Task HandleMovementOther(string message)
         {
             var coords = message.Split(':');
             var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
             var id = int.Parse(coords[0]);
-            Console.WriteLine("Moving player " + id + " from " + _player.Position + " to " + position);
             var p = _otherPlayers.FirstOrDefault(a => a.Id == id);
             if (p != null)
                 p.Position = position;
@@ -129,7 +236,6 @@ namespace Bomberman.Client
 
             var coords = message.Split(':');
             var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
-            Console.WriteLine("Moving player from " + _player.Position + " to " + position);
             _player.Position = position;
             return Task.CompletedTask;
         }

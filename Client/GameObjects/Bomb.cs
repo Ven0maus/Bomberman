@@ -12,17 +12,9 @@ namespace Bomberman.Client.GameObjects
         protected readonly int _strength;
         private readonly Grid _grid;
 
-        private float _currentTime = 0;
-
-        protected float _bombTime;
-        protected bool _detonated = false;
-        protected bool _done = false;
-
-        private List<Point> _cellPositions;
-
         protected readonly Player _placedBy;
 
-        public Bomb(Player placedBy, Point position, float bombTime, int strength, int id) : base(Color.White, Color.Transparent, 3)
+        public Bomb(Player placedBy, Point position, int strength, int id) : base(Color.White, Color.Transparent, 3)
         {
             Id = id;
             Position = position;
@@ -31,142 +23,25 @@ namespace Bomberman.Client.GameObjects
             _strength = strength;
             _grid = Game.GridScreen.Grid;
             _grid.GetValue(position.X, position.Y).HasBomb = true;
-            _bombTime = bombTime * 1000;
         }
 
-        public override void Update(TimeSpan timeElapsed)
+        public void CleanupFireAfter(List<Point> points)
         {
-            if (_done) return;
-            _currentTime += timeElapsed.Milliseconds;
-            if (_currentTime >= _bombTime)
-            {
-                if (!_detonated)
-                    Detonate();
-                else
-                    CleanupFireAfter();
-            }
-        }
-
-        protected virtual void CleanupFireAfter()
-        {
-            _done = true;
-
-            var cellPositions = GetCellPositions();
-
             // Remove fire cells
-            foreach (var pos in cellPositions)
+            foreach (var pos in points)
             {
                 var cell = _grid.GetValue(pos.X, pos.Y);
                 _grid.Explore(cell.Position.X, cell.Position.Y);
-
-                if (!cell.ContainsFireFrom.Contains(Id) || cell.ContainsFireFrom.Count > 1)
-                {
-                    cell.ContainsFireFrom.Remove(Id);
-                    continue; // Let other bomb handle this one
-                }
-
-                // Spawn powerup
-                if (cell.PowerUp != PowerUp.None)
-                {
-                    cell.Glyph = cell.PowerUp == PowerUp.ExtraBomb ? 5 : 6;
-                    cell.Foreground = Color.White;
-                }
             }
 
             Game.GridScreen.IsDirty = true;
             Parent = null;
         }
 
-        public List<Point> GetCellPositions()
+        public void Detonate()
         {
-            if (_cellPositions != null) return _cellPositions;
-            var cells = new List<Point>
-            {
-                Position
-            };
-
-            // Check each direction and expand 1 cell for each strength level
-            bool checkRight = true;
-            bool checkLeft = true;
-            bool checkUp = true;
-            bool checkDown = true;
-            for (int i = 1; i <= _strength; i++)
-            {
-                if (checkRight)
-                {
-                    var right = _grid.GetValue(Position.X + i, Position.Y);
-                    checkRight = right != null && right.Explored && right.Destroyable;
-                    if (right != null && right.Destroyable)
-                        cells.Add(right.Position);
-                }
-                if (checkLeft)
-                {
-                    var left = _grid.GetValue(Position.X - i, Position.Y);
-                    checkLeft = left != null && left.Explored && left.Destroyable;
-                    if (left != null && left.Destroyable)
-                        cells.Add(left.Position);
-                }
-                if (checkUp)
-                {
-                    var up = _grid.GetValue(Position.X, Position.Y - i);
-                    checkUp = up != null && up.Explored && up.Destroyable;
-                    if (up != null && up.Destroyable)
-                        cells.Add(up.Position);
-                }
-                if (checkDown)
-                {
-                    var down = _grid.GetValue(Position.X, Position.Y + i);
-                    checkDown = down != null && down.Explored && down.Destroyable;
-                    if (down != null && down.Destroyable)
-                        cells.Add(down.Position);
-                }
-            }
-
-            return _cellPositions = cells;
-        }
-
-        public virtual void Detonate()
-        {
-            _detonated = true;
-            _currentTime = 0;
-            _bombTime = 1250; // Time for cleanup
-
             Animation[0].Foreground = Color.Transparent;
             Animation.IsDirty = true;
-
-            // Remove from bombs collection
-            _grid.GetValue(Position.X, Position.Y).HasBomb = false;
-            _grid.Bombs.Remove(Position);
-
-            _placedBy.BombsPlaced -= 1;
-
-            var cellPositions = GetCellPositions();
-
-            foreach (var pos in cellPositions)
-            {
-                // Game over, kill player
-                if (_placedBy.Position == pos)
-                {
-                    Game.GameOver(_placedBy);
-                }
-
-                var cell = _grid.GetValue(pos.X, pos.Y);
-
-                // Destroy powerup in blast
-                if (!cell.HasFire && cell.Explored && cell.PowerUp != PowerUp.None)
-                    cell.PowerUp = PowerUp.None;
-
-                // Set cell on fire
-                cell.Glyph = 4;
-                cell.Foreground = Color.White;
-                cell.ContainsFireFrom.Add(Id);
-
-                if (cell.HasBomb)
-                {
-                    // Instantly detonate the bomb
-                    _grid.Bombs[cell.Position].Detonate();
-                }
-            }
 
             Game.GridScreen.IsDirty = true;
         }

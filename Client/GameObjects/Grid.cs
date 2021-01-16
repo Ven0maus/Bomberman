@@ -53,24 +53,37 @@ namespace Bomberman.Client.GameObjects
             UncoverSpawnLocations();
         }
 
+        public void BombDetonationPhase1(List<Point> points)
+        {
+            // Remove from bombs collection
+            foreach (var pos in points)
+            {
+                var cell = GetValue(pos.X, pos.Y);
+
+                // Set cell on fire
+                cell.Glyph = 4;
+                cell.Foreground = Color.White;
+            }
+        }
+
+        public void SpawnPowerUp(Point position, PowerUp powerUp)
+        {
+            var cell = GetValue(position.X, position.Y);
+            cell.Glyph = powerUp == PowerUp.ExtraBomb ? 5 : 6;
+            cell.Foreground = Color.White;
+            Game.GridScreen.IsDirty = true;
+        }
+
+        public void DeletePowerUp(Point position)
+        {
+            var cell = GetValue(position.X, position.Y);
+            cell.Explored = true;
+            Game.GridScreen.IsDirty = true;
+        }
+
         public bool IsWall(int x, int y)
         {
             return !Cells[y * _width + x].Explored;
-        }
-
-        public virtual bool PlaceBomb(Player placedBy, Point position, int strength, int id)
-        {
-            if (Bombs.ContainsKey(position) || GetValue(position.X, position.Y).HasBomb) return false;
-
-            var bomb = new Bomb(placedBy, position, 3f, strength, id);
-
-            // Server-side doesn't have active grid screen
-            if (Game.GridScreen != null)
-                bomb.Parent = Game.GridScreen;
-
-            Bombs.Add(position, bomb);
-
-            return true;
         }
 
         public bool CanMove(int x, int y)

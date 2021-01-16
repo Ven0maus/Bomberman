@@ -35,13 +35,13 @@ namespace Server.GameLogic
         public Game(IEnumerable<TcpClient> clients)
         {
             // Setup players for clients
-            Players = clients.ToDictionary(a => a, a => new PlayerContext(GetSpawnPosition(), ClientIdCounter++));
+            Players = clients.ToDictionary(a => a, a => new PlayerContext(a, GetSpawnPosition(), ClientIdCounter++));
 
             if (Players.Count > 8)
                 throw new Exception("Too many players joined the game: " + Players.Count);
 
             // Generate server-side grid
-            Context = new GridContext(Bomberman.Client.Game.GridWidth, Bomberman.Client.Game.GridHeight);
+            Context = new GridContext(this, Bomberman.Client.Game.GridWidth, Bomberman.Client.Game.GridHeight);
 
             // Let players know where to spawn
             foreach (var player in Players)
@@ -68,7 +68,7 @@ namespace Server.GameLogic
         {
             if (Players.Count < 8)
             {
-                var player = new PlayerContext(GetSpawnPosition(), ClientIdCounter++);
+                var player = new PlayerContext(client, GetSpawnPosition(), ClientIdCounter++);
                 Players.Add(client, player);
 
                 // Spawn ourself
@@ -99,7 +99,8 @@ namespace Server.GameLogic
         public async void Move(TcpClient client, Point position)
         {
             var player = GetPlayer(client);
-            if (player == null) return;
+            if (player == null)
+                throw new Exception("Player is null!");
 
             var previous = player.Position;
             var diffX = previous.X - position.X;
@@ -108,21 +109,26 @@ namespace Server.GameLogic
             if (diffX > 1 || diffX < -1 || diffY > 1 || diffY < -1)
             {
                 Console.WriteLine("Player attempted a wrong movement action, packet ignored.");
-                await PacketHandler.SendPacket(client, new Packet("move", $"bad request"));
+                await PacketHandler.SendPacket(client, new Packet("move", $"bad entry"));
                 return;
             }
 
             if (diffX == 0 && diffY == 0)
             {
                 Console.WriteLine("Player attempted to move to the same position, packet ignored.");
-                await PacketHandler.SendPacket(client, new Packet("move", $"bad request"));
+                await PacketHandler.SendPacket(client, new Packet("move", $"bad entry"));
+                return;
+            }
+
+            if (!Context.CanMove(position.X, position.Y))
+            {
+                await PacketHandler.SendPacket(client, new Packet("move", $"bad entry"));
                 return;
             }
 
             // Update server-side player position
             player.Position = position;
 
-            Console.WriteLine("Player ["+client.Client.RemoteEndPoint+"] moved to " + position);
             await PacketHandler.SendPacket(client, new Packet("move", $"{player.Position.X}:{player.Position.Y}"));
 
             // Let all other clients know we moved
@@ -143,10 +149,22 @@ namespace Server.GameLogic
             var player = GetPlayer(client);
             if (player == null) return;
 
-            if (Context.PlaceBomb(player, player.Position, player.BombStrength))
+            if (Context.PlaceBomb(player, player.Position, player.BombStrength, out BombContext bomb))
             {
-                Console.WriteLine("Player [" + client.Client.RemoteEndPoint + "] placed a bomb at " + player.Position);
-                await PacketHandler.SendPacket(client, new Packet("placebomb", $"{player.Position.X}:{player.Position.Y}"));
+                await PacketHandler.SendPacket(client, new Packet("placebomb", $"{player.Position.X}:{player.Position.Y}:{player.BombStrength}:{bomb.Id}"));
+
+                // Let all other clients know we placed a bomb
+                foreach (var p in Players)
+                {
+                    if (p.Key != client)
+                    {
+                        await PacketHandler.SendPacket(p.Key, new Packet("placebombother", $"{player.Position.X}:{player.Position.Y}:{player.BombStrength}:{bomb.Id}:{player.Id}"));
+                    }
+                }
+            }
+            else
+            {
+                await PacketHandler.SendPacket(client, new Packet("placebomb", "bad entry"));
             }
         }
 

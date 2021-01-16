@@ -1,15 +1,15 @@
-﻿using Bomberman.Client.GameObjects;
-using Bomberman.Client.Graphics;
+﻿using Bomberman.Client.Graphics;
+using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
+using System.Linq;
 using System.Timers;
 
 namespace Server.GameLogic
 {
     internal class BombContext
     {
-        public int Id;
-
+        public readonly int Id;
         private readonly GridContext _grid;
         private readonly Timer _bombTimer;
         private readonly PlayerContext _placedBy;
@@ -18,17 +18,23 @@ namespace Server.GameLogic
         private readonly float _strength;
         private bool _done, _detonated;
 
+        private readonly Game _game;
+
         public Point Position { get; set; }
 
-        public BombContext(GridContext grid, PlayerContext player, Point position, float time, int strength) 
+        public BombContext(Game game, GridContext grid, PlayerContext player, Point position, float time, int strength, int id) 
         {
+            _game = game;
+            Id = id;
             _placedBy = player;
             _grid = grid;
-            _bombTime = time;
+            _bombTime = time * 1000f;
             _strength = strength;
             Position = position;
+            grid.GetValue(position.X, position.Y).HasBomb = true;
             _bombTimer = new Timer(_bombTime);
             _bombTimer.Elapsed += BombTimer_Elapsed;
+            _bombTimer.Start();
         }
 
         private void BombTimer_Elapsed(object sender, ElapsedEventArgs e)
@@ -97,8 +103,11 @@ namespace Server.GameLogic
         protected void CleanupFireAfter()
         {
             _done = true;
+            _bombTimer.Stop();
 
             var cellPositions = GetCellPositions();
+
+            var powerupSpawns = new List<Point>();
 
             // Remove fire cells
             foreach (var pos in cellPositions)
@@ -106,26 +115,73 @@ namespace Server.GameLogic
                 var cell = _grid.GetValue(pos.X, pos.Y);
                 _grid.Explore(cell.Position.X, cell.Position.Y);
 
-                if (!cell.ContainsFireFrom.Contains(Id) || cell.ContainsFireFrom.Count > 1)
+                var containsFireFrom = cell.ContainsFireFrom.Contains(Id);
+                if (!containsFireFrom || cell.ContainsFireFrom.Count > 1)
                 {
-                    cell.ContainsFireFrom.Remove(Id);
+                    if (containsFireFrom)
+                        cell.ContainsFireFrom.Remove(Id);
                     continue; // Let other bomb handle this one
                 }
 
                 // Spawn powerup
                 if (cell.PowerUp != PowerUp.None)
                 {
-                    // TODO: Tell client to spawn a powerup on this tile
+                    powerupSpawns.Add(pos);
+                }
+            }
+
+            // Send detonation packet to the client
+            string formattedCellPositions = string.Join(":", cellPositions.Select(a => a.X + "," + a.Y));
+            PacketHandler.SendPacket(_placedBy.Client, new Packet("detonatePhase2", Id.ToString() + ":" + formattedCellPositions)).GetAwaiter().GetResult();
+
+            // Let all other clients know this bomb detonated
+            foreach (var client in _game.Players)
+            {
+                if (client.Key != _placedBy.Client)
+                {
+                    PacketHandler.SendPacket(client.Key, new Packet("detonatePhase2", Id.ToString() + ":" + formattedCellPositions)).GetAwaiter().GetResult();
+                }
+            }
+
+            // Tell client to spawn powerups
+            // TODO: Check if detonation doesn't mess this up because of packet order
+            foreach (var pos in powerupSpawns)
+            {
+                var cell = _grid.GetValue(pos.X, pos.Y);
+
+                // Tell client to spawn a powerup on this tile
+                PacketHandler.SendPacket(_placedBy.Client, new Packet("spawnpowerup", $"{pos.X}:{pos.Y}:{(int)cell.PowerUp}")).GetAwaiter().GetResult();
+
+                // Let all other clients know to spawn a powerup
+                foreach (var client in _game.Players)
+                {
+                    if (client.Key != _placedBy.Client)
+                    {
+                        PacketHandler.SendPacket(client.Key, new Packet("spawnpowerup", $"{pos.X}:{pos.Y}:{(int)cell.PowerUp}")).GetAwaiter().GetResult();
+                    }
                 }
             }
         }
 
-        public void Detonate()
+        public class DetonationData
+        {
+            public List<int> BombIds = new List<int>();
+            public List<Point> CellPositions = new List<Point>();
+
+            public void Add(DetonationData data)
+            {
+                BombIds.AddRange(data.BombIds.Where(a => !BombIds.Contains(a)));
+                CellPositions.AddRange(data.CellPositions.Where(a => !CellPositions.Contains(a)));
+            }
+        }
+
+        public DetonationData Detonate(bool sendPackets = true)
         {
             // Time for cleanup
             _detonated = true;
             _bombTime = 1250;
             _bombTimer.Interval = _bombTime;
+            _bombTimer.Stop();
 
             // Remove from bombs collection
             _grid.GetValue(Position.X, Position.Y).HasBomb = false;
@@ -134,7 +190,9 @@ namespace Server.GameLogic
             _placedBy.BombsPlaced -= 1;
 
             var cellPositions = GetCellPositions();
-
+            var data = new DetonationData();
+            data.BombIds.Add(Id);
+            data.CellPositions.AddRange(cellPositions);
             foreach (var pos in cellPositions)
             {
                 // Game over, kill player
@@ -155,11 +213,31 @@ namespace Server.GameLogic
                 if (cell.HasBomb)
                 {
                     // Instantly detonate the bomb
-                    _grid.Bombs[cell.Position].Detonate();
+                    var bomb = _grid.Bombs[cell.Position];
+                    data.Add(bomb.Detonate(false));
                 }
             }
 
-            // TODO: Send detonation cells to client
+            if (sendPackets)
+            {
+                // Send detonation packet to the client
+                string formattedCellPositions = string.Join(":", data.CellPositions.Select(a => a.X + "," + a.Y));
+                PacketHandler.SendPacket(_placedBy.Client, new Packet("detonatePhase1", string.Join(",", data.BombIds) + ":" + formattedCellPositions)).GetAwaiter().GetResult();
+
+                // Let all other clients know this bomb detonated
+                foreach (var client in _game.Players)
+                {
+                    if (client.Key != _placedBy.Client)
+                    {
+                        PacketHandler.SendPacket(client.Key, new Packet("detonatePhase1", string.Join(",", data.BombIds) + ":" + formattedCellPositions)).GetAwaiter().GetResult();
+                    }
+                }
+
+            }
+
+            _bombTimer.Start(); // Start again for cleanup
+
+            return data;
         }
     }
 }

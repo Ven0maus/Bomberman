@@ -1,7 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Net.Sockets;
 
 namespace Server.GameLogic
 {
@@ -14,8 +12,11 @@ namespace Server.GameLogic
 
         public Point Position { get; set; }
 
-        public PlayerContext(Point position, int id)
+        public readonly TcpClient Client;
+
+        public PlayerContext(TcpClient client, Point position, int id)
         {
+            Client = client;
             Id = id;
             Position = position;
         }

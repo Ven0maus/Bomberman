@@ -95,7 +95,10 @@ namespace Server
                         if (!heartbeatCheck.HasBeenSend)
                             heartbeatCheck.Send();
                         else
+                        {
+                            Console.WriteLine("Client ["+client.Key.Client.RemoteEndPoint+"] did not respond to heartbeat check in time, closing down client resources.");
                             HandleDisconnectedClient(client.Key);
+                        }
                     }
                 }
                 catch (SocketException)
@@ -187,17 +190,23 @@ namespace Server
                 switch (packet.Command)
                 {
                     case "heartbeat":
-                        HandleHeartbeatPacket(client, packet);
+                        Console.WriteLine("Received heartbeat response: " + packet.Message);
                         break;
                     case "move":
                         var coords = packet.Message.Split(':');
                         var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
                         _game?.Move(client, position);
                         break;
+                    case "placebomb":
+                        _game?.PlaceBomb(client);
+                        break;
                     default:
                         Console.WriteLine("Unhandled packet: " + packet.ToString());
                         break;
                 }
+
+                // Reset heartbeat when we receive something
+                _timeSinceLastHeartbeat[client].Reset();
             }
             catch(SocketException)
             {
@@ -207,12 +216,6 @@ namespace Server
             {
                 HandleDisconnectedClient(client);
             }
-        }
-
-        private void HandleHeartbeatPacket(TcpClient client, Packet packet)
-        {
-            Console.WriteLine("Received heartbeat response: " + packet.Message);
-            _timeSinceLastHeartbeat[client].Reset();
         }
 
         // Awaits for a new connection and then adds them to the waiting lobby
@@ -290,7 +293,7 @@ namespace Server
         // gracefully or not.  Will remove them from clint list and lobby
         public void HandleDisconnectedClient(TcpClient client)
         {
-            Console.WriteLine("Client lost connection from {0}.", client.Client.RemoteEndPoint);
+            Console.WriteLine("Client lost connection.");
 
             // Remove from collections and free resources
             _timeSinceLastHeartbeat.Remove(client);
