@@ -324,23 +324,23 @@ namespace Bomberman.Client
         }
 
         private double _timeSinceLastReceive = 0;
+        private readonly List<Task> _tasks = new List<Task>();
         // Main loop for the Games Client
         public void Update(GameTime gameTime)
         {
             _timeSinceLastReceive += gameTime.ElapsedGameTime.Milliseconds;
             bool wasRunning = Running;
 
-            var tasks = new List<Task>();
             // Listen for messages
             if (Running)
             {
                 // Check for new packets
                 if (_timeSinceLastReceive > 20)
                 {
-                    tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher, false));
                     _timeSinceLastReceive = 0;
+                    _tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher, false));
+                    _tasks.RemoveAll(a => a.IsCompleted);
                 }
-                tasks.RemoveAll(a => a.IsCompleted);
 
                 _timeSinceLastHeartbeat += gameTime.ElapsedGameTime.Milliseconds;
                 if (_timeSinceLastHeartbeat > 5 * 1000)
@@ -358,7 +358,7 @@ namespace Bomberman.Client
             if (Running) return;
 
             // Finish tasks if any where still added
-            Task.WaitAll(tasks.ToArray(), 1000);
+            Task.WaitAll(_tasks.ToArray(), 1000);
 
             // Cleanup
             CleanupNetworkResources();
