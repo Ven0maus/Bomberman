@@ -13,6 +13,9 @@ namespace Bomberman.Client.Graphics
 
         private Dictionary<int, string> _playerSlots;
 
+        private bool _ready;
+        private Button _readyUpButton;
+
         public ClientWaitingLobby(int width, int height) : base(width, height) 
         {
             _width = width;
@@ -49,25 +52,35 @@ namespace Bomberman.Client.Graphics
             leaveLobbyButton.Click += LeaveLobbyButton_Click;
             Add(leaveLobbyButton);
 
-            var readyUpButton = new Button(12, 3)
+            _readyUpButton = new Button(12, 3)
             {
                 Text = "Ready up",
                 Position = new Point((_width / 2) + 2, yCoord),
                 UseMouse = true,
                 UseKeyboard = false,
             };
-            readyUpButton.Click += ReadyUpButton_Click;
-            Add(readyUpButton);
+            _readyUpButton.Click += ReadyUpButton_Click;
+            Add(_readyUpButton);
         }
 
         private void ReadyUpButton_Click(object sender, System.EventArgs e)
         {
-            throw new System.NotImplementedException();
+            _ready = !_ready;
+            _readyUpButton.Text = _ready ? "Unready" : "Ready up";
+
+            // Let server know that we readied or unreadied
+            Game.Client.SendPacket(Game.Client.Client, new ServerSide.Packet("ready", _ready ? "1" : "0"));
         }
 
         private void LeaveLobbyButton_Click(object sender, System.EventArgs e)
         {
-            throw new System.NotImplementedException();
+            Game.Client.Disconnect();
+            Game.MainMenuScreen.IsVisible = true;
+            Game.MainMenuScreen.IsFocused = true;
+            Global.CurrentScreen = Game.MainMenuScreen;
+            RemovePlayer(Game.Client.PlayerName);
+            IsVisible = false;
+            IsFocused = false;
         }
 
         public void PrintTitle()

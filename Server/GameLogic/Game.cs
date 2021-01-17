@@ -33,15 +33,14 @@ namespace Server.GameLogic
 
         public Game(Dictionary<TcpClient, string> clients, out Dictionary<TcpClient, PlayerContext> players)
         {
+            Console.WriteLine("Starting game.");
+
             // Setup players for clients
             Players = clients.ToDictionary(a => a.Key, a => new PlayerContext(a.Key, GetSpawnPosition(), ClientIdCounter++) { Name = a.Value });
             players = Players;
 
             // Remove from waiting lobby
-            Network.Instance.WaitingLobby.RemoveAll(a => Players.Keys.Contains(a));
-
-            if (Players.Count > 8)
-                throw new Exception("Too many players joined the game: " + Players.Count);
+            Network.Instance.WaitingLobby.Clear();
 
             // Generate server-side grid
             Context = new GridContext(this, Bomberman.Client.Game.GridWidth, Bomberman.Client.Game.GridHeight);
@@ -49,9 +48,10 @@ namespace Server.GameLogic
             // Let players know where to spawn
             foreach (var player in Players)
             {
-                // Let ourself know the game started
+                // Tell everyone the game started
                 Network.Instance.SendPacket(player.Key, new Packet("gamestart"));
-                // Spawn ourself
+
+                // Tell everyone to spawn themselves
                 Network.Instance.SendPacket(player.Key, new Packet("spawn", player.Value.Id + ":" + player.Value.Position.X + ":" + player.Value.Position.Y));
 
                 foreach (var otherPlayer in Players)
@@ -61,8 +61,6 @@ namespace Server.GameLogic
                         // Spawn also all the others for ourself
                         Network.Instance.SendPacket(player.Key, new Packet("spawnother", otherPlayer.Value.Id + ":" + otherPlayer.Value.Position.X + ":" + otherPlayer.Value.Position.Y + ":" + otherPlayer.Value.Name));
                         
-                        // Let others know the game started
-                        Network.Instance.SendPacket(otherPlayer.Key, new Packet("gamestart"));
                         // Tell others to spawn us
                         Network.Instance.SendPacket(otherPlayer.Key, new Packet("spawnother", player.Value.Id + ":" + player.Value.Position.X + ":" + player.Value.Position.Y + ":" + player.Value.Name));
                     }

@@ -19,7 +19,7 @@ namespace Bomberman.Client
         private readonly string _serverIp;
         private readonly int _serverPort;
 
-        private readonly string _playerName;
+        public readonly string PlayerName;
         private Player _player;
         private readonly List<Player> _otherPlayers;
 
@@ -35,7 +35,7 @@ namespace Bomberman.Client
         public GameClient(string serverIp, int serverPort, string playerName)
         {
             Client = new TcpClient();
-            _playerName = playerName;
+            PlayerName = playerName;
             _serverIp = serverIp;
             _serverPort = serverPort;
             _otherPlayers = new List<Player>();
@@ -114,7 +114,7 @@ namespace Bomberman.Client
                 _commandHandlers["gamestart"] = HandleGameStart;
 
                 // Send our player name to the server
-                SendPacket(Client, new Packet("playername", _playerName));
+                SendPacket(Client, new Packet("playername", PlayerName));
 
                 return true;
             }
@@ -135,7 +135,7 @@ namespace Bomberman.Client
 
         private Task HandleGameStart(string message)
         {
-            //Game.InitializeGameScreen(true);
+            Game.InitializeGameScreen(true);
             Console.WriteLine("Game started!");
             return Task.CompletedTask;
         }
@@ -286,7 +286,7 @@ namespace Bomberman.Client
             _player = new Player(position, int.Parse(coords[0]), true)
             {
                 Parent = Game.GridScreen,
-                Name = _playerName
+                Name = PlayerName
             };
             return Task.CompletedTask;
         }

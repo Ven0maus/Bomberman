@@ -17,20 +17,25 @@ namespace Server
         public static Network Instance { get; private set; }
 
         private const float HeartbeatInterval = 2f;
+        private const float GameStartCountdown = 120f;
 
         private readonly string _serverIp;
         private readonly int _serverPort;
         private readonly TcpListener _listener;
         private readonly Dictionary<TcpClient, string> _clients;
         private Dictionary<TcpClient, PlayerContext> _players;
-        public readonly List<TcpClient> WaitingLobby;
+        public readonly Dictionary<TcpClient, bool> WaitingLobby;
         private readonly int _maxPlayers;
 
         private readonly System.Timers.Timer _heartbeatTimer;
         private bool _running;
         private GameLogic.Game _game;
 
+        private readonly System.Timers.Timer _gameStartTimer;
+
         private readonly Dictionary<TcpClient, HeartbeatCheck> _timeSinceLastHeartbeat;
+
+        public bool GameOngoing { get { return _game != null; } }
 
         private class HeartbeatCheck
         {
@@ -97,10 +102,31 @@ namespace Server
             _clients = new Dictionary<TcpClient, string>();
             _timeSinceLastHeartbeat = new Dictionary<TcpClient, HeartbeatCheck>();
             _listener = new TcpListener(IPAddress.Parse(serverIp), serverPort);
-            WaitingLobby = new List<TcpClient>();
+            WaitingLobby = new Dictionary<TcpClient, bool>();
+
+            // Countdown timer for game start once 2 or more players are ready
+            _gameStartTimer = new System.Timers.Timer(GameStartCountdown * 1000);
+            _gameStartTimer.Elapsed += GameStartTimer_Elapsed;
 
             _heartbeatTimer = new System.Timers.Timer(1000);
             _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
+        }
+
+        private void GameStartTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            StartGame();
+        }
+
+        private void StartGame()
+        {
+            var readyClients = WaitingLobby
+                .Where(a => a.Value)
+                .Select(a => a.Key)
+                .ToList();
+            var clients = _clients
+                .Where(a => readyClients.Contains(a.Key))
+                .ToDictionary(a => a.Key, a => a.Value);
+            _game = new GameLogic.Game(clients, out _players);
         }
 
         private readonly List<TcpClient> _clientsToRemoveFromHeartbeatMonitoring = new List<TcpClient>();
@@ -224,6 +250,9 @@ namespace Server
                         _game?.PlaceBomb(client);
                         Console.WriteLine("Client attempted to place a bomb.");
                         break;
+                    case "bye":
+                        HandleDisconnectedClient(client);
+                        break;
                     case "playername":
                         string playerName = packet.Message;
 
@@ -241,7 +270,7 @@ namespace Server
                         string msg = $"Welcome to the Bomberman Server {playerName}.";
                         SendPacket(client, new Packet("message", msg));
 
-                        WaitingLobby.Add(client);
+                        WaitingLobby.Add(client, false);
 
                         // Add all clients in waiting lobby to the client's lobby
                         foreach (var c in _clients.Where(a => a.Value != null))
@@ -252,17 +281,36 @@ namespace Server
                         {
                             SendPacket(c.Key, new Packet("joinwaitinglobby", playerName));
                         }
-
-                        // TODO: Remove this part and rework it so all clients instantly join after all readied up
-                        /*
-                        if (_clients.Any() && _game == null)
-                            _game = new GameLogic.Game(_clients, out _players);
-                        else if (_game != null) 
-                            _game.AddPlayer(client);
-                        */
                         break;
-                    case "readyplayer":
-                        //TODO:
+                    case "ready":
+                        if (!WaitingLobby.ContainsKey(client))
+                        {
+                            Console.WriteLine("Received a ready response but client was not in waiting lobby.");
+                            return;
+                        }
+
+                        var ready = packet.Message.Equals("1");
+                        WaitingLobby[client] = ready;
+
+                        // If a game is already ongoing, we don't need to overwrite the current with new players
+                        if (GameOngoing) return;
+
+                        // Check if more than one client is ready then start the countdown
+                        // Else stop the countdown and reset it
+                        // If all clients are ready, start game instantly.
+                        if (WaitingLobby.Count(a => a.Value) == WaitingLobby.Count)
+                        {
+                            _gameStartTimer.Stop();
+                            StartGame();
+                        }
+                        else if (WaitingLobby.Count(a => a.Value) >= 2)
+                        {
+                            _gameStartTimer.Start();
+                        }
+                        else
+                        {
+                            _gameStartTimer.Stop();
+                        }
                         break;
                     default:
                         Console.WriteLine("Unhandled packet: " + packet.ToString());
@@ -331,12 +379,12 @@ namespace Server
             Console.WriteLine("Client lost connection.");
 
             // First notify other waiting lobby clients if this one is still in waiting lobby
-            if (WaitingLobby.Contains(client))
+            if (WaitingLobby.ContainsKey(client))
             {
                 foreach (var c in WaitingLobby)
                 {
-                    if (c != client)
-                        SendPacket(c, new Packet("removefromwaitinglobby", _clients[client]));
+                    if (c.Key != client)
+                        SendPacket(c.Key, new Packet("removefromwaitinglobby", _clients[client]));
                 }
             }
 
