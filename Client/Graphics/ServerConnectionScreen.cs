@@ -175,7 +175,7 @@ __________              ___.
                 IsVisible = false;
 
                 // Server will send player to the client waiting lobby
-                // TODO: We should start a timer here, incase server packet isn't received by client
+                // A timer is automatically started, incase server packet isn't received by client
                 Connecting = true;
             }
             else

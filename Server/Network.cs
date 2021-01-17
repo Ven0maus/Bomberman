@@ -415,7 +415,7 @@ namespace Server
         // Awaits for a new connection and then adds them to the waiting lobby
         private async Task HandleNewConnection()
         {
-            // Get the new client using a Future
+            // See if a new connection attempted to join
             TcpClient newClient = await _listener.AcceptTcpClientAsync();
             Console.WriteLine("New connection from {0}.", newClient.Client.RemoteEndPoint);
 
@@ -445,7 +445,7 @@ namespace Server
             SendPacket(client, new Packet("bye", message));
 
             // Let packed be processed by client
-            Thread.Sleep(50);
+            Thread.Sleep(20);
 
             // Cleanup resources on our end
             HandleDisconnectedClient(client);

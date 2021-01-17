@@ -475,6 +475,7 @@ namespace Bomberman.Client
             CleanupNetworkResources();
             if (wasRunning)
                 Console.WriteLine("Disconnected from the server.");
+            Game.Client = null;
         }
 
         private bool IsDisconnected(TcpClient client)
