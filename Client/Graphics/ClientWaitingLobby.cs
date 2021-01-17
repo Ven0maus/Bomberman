@@ -11,7 +11,7 @@ namespace Bomberman.Client.Graphics
     {
         private readonly int _width, _height;
 
-        private Dictionary<int, string> _playerSlots;
+        private Dictionary<string, bool> _playerSlots;
 
         private bool _ready;
         private Button _readyUpButton;
@@ -30,11 +30,7 @@ namespace Bomberman.Client.Graphics
             // Set the new theme colors         
             ThemeColors = colors;
 
-            _playerSlots = new Dictionary<int, string>();
-            for (int i = 0; i < 8; i++)
-            {
-                _playerSlots.Add(i, null);
-            }
+            _playerSlots = new Dictionary<string, bool>();
 
             AddButtons();
         }
@@ -67,6 +63,7 @@ namespace Bomberman.Client.Graphics
         {
             _ready = !_ready;
             _readyUpButton.Text = _ready ? "Unready" : "Ready up";
+            SetReady(Game.Client.PlayerName, _ready);
 
             // Let server know that we readied or unreadied
             Game.Client.SendPacket(Game.Client.Client, new ServerSide.Packet("ready", _ready ? "1" : "0"));
@@ -120,38 +117,41 @@ __________              ___.
         public void ShowPlayerSlots()
         {
             int yCoord = (_height / 2) - 4;
+            int total = 0;
             foreach (var slot in _playerSlots)
             {
-                if (slot.Value != null)
-                {
-                    Print((_width / 2) - 10, yCoord, $"Slot [{slot.Key + 1}]: {slot.Value}", Color.White);
-                }
-                else
-                {
-                    Print((_width / 2) - 10, yCoord, $"Slot [{slot.Key + 1}]: Available", Color.White);
-                }
+                Print((_width / 2) - 10, yCoord, $"Slot [{total + 1}]: {slot.Key}", slot.Value ? Color.Green : Color.Red);
                 yCoord += 2;
+                total++;
             }
+
+            if (total < 8)
+            {
+                for (int i=total; i < 8; i++)
+                {
+                    Print((_width / 2) - 10, yCoord, $"Slot [{i + 1}]: Available", Color.Gray);
+                    yCoord += 2;
+                }
+            }
+        }
+
+        public void SetReady(string playerName, bool ready)
+        {
+            if (_playerSlots.ContainsKey(playerName))
+                _playerSlots[playerName] = ready;
+            Invalidate();
         }
 
         public void RemovePlayer(string playerName)
         {
-            var slot = _playerSlots.FirstOrDefault(a => a.Value.Equals(playerName, System.StringComparison.OrdinalIgnoreCase));
-            _playerSlots[slot.Key] = null;
+            _playerSlots.Remove(playerName);
             Invalidate();
         }
 
         public void AddPlayer(string playerName)
         {
-            foreach (var slot in _playerSlots)
-            {
-                if (slot.Value == null)
-                {
-                    _playerSlots[slot.Key] = playerName;
-                    Invalidate();
-                    break;
-                }
-            }
+            _playerSlots.Add(playerName, false);
+            Invalidate();
         }
     }
 }

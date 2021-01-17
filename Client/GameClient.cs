@@ -112,6 +112,8 @@ namespace Bomberman.Client
                 _commandHandlers["spawnpowerup"] = HandlePowerupSpawn;
                 _commandHandlers["pickuppowerup"] = HandlePowerupPickup;
                 _commandHandlers["gamestart"] = HandleGameStart;
+                _commandHandlers["ready"] = HandleReady;
+                _commandHandlers["unready"] = HandleUnReady;
 
                 // Send our player name to the server
                 SendPacket(Client, new Packet("playername", PlayerName));
@@ -125,6 +127,18 @@ namespace Bomberman.Client
             }
 
             return false;
+        }
+
+        private Task HandleUnReady(string message)
+        {
+            Game.ClientWaitingLobby.SetReady(message, false);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleReady(string message)
+        {
+            Game.ClientWaitingLobby.SetReady(message, true);
+            return Task.CompletedTask;
         }
 
         private Task HandleRemoveFromWaitingLobby(string message)
@@ -276,6 +290,7 @@ namespace Bomberman.Client
                 Parent = Game.GridScreen,
                 Name = playerName
             });
+            Console.WriteLine("Spawned other: " + playerName);
             return Task.CompletedTask;
         }
 
@@ -288,6 +303,7 @@ namespace Bomberman.Client
                 Parent = Game.GridScreen,
                 Name = PlayerName
             };
+            Console.WriteLine("Spawned ourself: " + PlayerName);
             return Task.CompletedTask;
         }
 

@@ -292,6 +292,12 @@ namespace Server
                         var ready = packet.Message.Equals("1");
                         WaitingLobby[client] = ready;
 
+                        // Let clients know the client has readied/unreadied
+                        foreach (var c in WaitingLobby.Where(a => a.Key != client))
+                        {
+                            SendPacket(c.Key, new Packet(ready ? "ready" : "unready", _clients[client]));
+                        }
+
                         // If a game is already ongoing, we don't need to overwrite the current with new players
                         if (GameOngoing) return;
 
@@ -306,6 +312,7 @@ namespace Server
                         else if (WaitingLobby.Count(a => a.Value) >= 2)
                         {
                             _gameStartTimer.Start();
+                            // TODO: Let clients know timer has started
                         }
                         else
                         {

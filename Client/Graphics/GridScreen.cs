@@ -13,14 +13,6 @@ namespace Bomberman.Client.Graphics
         {
             Grid = new Grid(width, height);
 
-            /*
-            // Initiate player
-            new Player(new Microsoft.Xna.Framework.Point(0, 0))
-            {
-                Parent = this
-            };
-            */
-
             // Set screen surface to grid match cells
             SetSurface(Grid.Cells, width, height);
         }

@@ -48,23 +48,21 @@ namespace Server.GameLogic
             // Let players know where to spawn
             foreach (var player in Players)
             {
-                // Tell everyone the game started
+                // Tell client the game started
                 Network.Instance.SendPacket(player.Key, new Packet("gamestart"));
 
-                // Tell everyone to spawn themselves
+                // Tell client to spawn itself
                 Network.Instance.SendPacket(player.Key, new Packet("spawn", player.Value.Id + ":" + player.Value.Position.X + ":" + player.Value.Position.Y));
 
+                // Tell all others that we spawned
                 foreach (var otherPlayer in Players)
                 {
                     if (otherPlayer.Key != player.Key)
                     {
-                        // Spawn also all the others for ourself
+                        // Spawn all others for the client
                         Network.Instance.SendPacket(player.Key, new Packet("spawnother", otherPlayer.Value.Id + ":" + otherPlayer.Value.Position.X + ":" + otherPlayer.Value.Position.Y + ":" + otherPlayer.Value.Name));
-                        
-                        // Tell others to spawn us
-                        Network.Instance.SendPacket(otherPlayer.Key, new Packet("spawnother", player.Value.Id + ":" + player.Value.Position.X + ":" + player.Value.Position.Y + ":" + player.Value.Name));
                     }
-                }      
+                }
             }
         }
 
