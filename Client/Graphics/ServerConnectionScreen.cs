@@ -9,7 +9,7 @@ namespace Bomberman.Client.Graphics
     public class ServerConnectionScreen : ControlsConsole
     {
         private readonly int _width, _height;
-        private readonly TextBox _serverIpBox, _serverPortBox;
+        private readonly TextBox _serverIpBox, _serverPortBox, _playerName;
 
         public ServerConnectionScreen(int width, int height) : base(width, height)
         {
@@ -24,6 +24,16 @@ namespace Bomberman.Client.Graphics
 
             // Set the new theme colors         
             ThemeColors = colors;
+
+            _playerName = new TextBox(20)
+            {
+                Position = new Point((_width / 2) - 5, (_height / 2) - 5),
+                Name = "Player-name:",
+                UseKeyboard = true,
+                AllowDecimal = true,
+                Text = "Test"
+            };
+            Add(_playerName);
 
             _serverIpBox = new TextBox(20)
             {
@@ -86,6 +96,8 @@ __________              ___.
                 Print(_serverIpBox.Position.X - 14, _serverIpBox.Position.Y, _serverIpBox.Name, Color.White);
             if (_serverPortBox != null)
                 Print(_serverPortBox.Position.X - 14, _serverPortBox.Position.Y, _serverPortBox.Name, Color.White);
+            if (_playerName != null)
+                Print(_playerName.Position.X - 14, _playerName.Position.Y, _playerName.Name, Color.White);
         }
 
         private void AddButtons()
@@ -127,14 +139,20 @@ __________              ___.
                 return;
             }
 
-            Game.Client = new GameClient(_serverIpBox.Text, port);
+            if (string.IsNullOrWhiteSpace(_playerName.Text))
+            {
+                // TODO: Show invalid name error message
+                return;
+            }
+
+            Game.Client = new GameClient(_serverIpBox.Text, port, _playerName.Text);
             if (Game.Client.Connect())
             {
                 IsFocused = false;
                 IsVisible = false;
 
-                // Send player to client waiting lobby
-
+                // Let server send player to client waiting lobby
+                
             }
             else
             {

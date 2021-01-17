@@ -16,13 +16,14 @@ namespace Server
     {
         public static Network Instance { get; private set; }
 
-        private const float HeartbeatInterval = 10f;
+        private const float HeartbeatInterval = 2f;
 
         private readonly string _serverIp;
         private readonly int _serverPort;
         private readonly TcpListener _listener;
-        private readonly List<TcpClient> _clients;
+        private readonly Dictionary<TcpClient, string> _clients;
         private Dictionary<TcpClient, PlayerContext> _players;
+        public readonly List<TcpClient> WaitingLobby;
         private readonly int _maxPlayers;
 
         private readonly System.Timers.Timer _heartbeatTimer;
@@ -93,9 +94,10 @@ namespace Server
             _serverPort = serverPort;
             _maxPlayers = maxPlayers;
             _running = false;
-            _clients = new List<TcpClient>();
+            _clients = new Dictionary<TcpClient, string>();
             _timeSinceLastHeartbeat = new Dictionary<TcpClient, HeartbeatCheck>();
             _listener = new TcpListener(IPAddress.Parse(serverIp), serverPort);
+            WaitingLobby = new List<TcpClient>();
 
             _heartbeatTimer = new System.Timers.Timer(1000);
             _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
@@ -112,7 +114,7 @@ namespace Server
 
             foreach (var client in _timeSinceLastHeartbeat)
             {
-                if (!_clients.Contains(client.Key)) continue;
+                if (!_clients.ContainsKey(client.Key)) continue;
                 var heartbeatCheck = _timeSinceLastHeartbeat[client.Key];
                 if (heartbeatCheck.Time.AddMilliseconds(HeartbeatInterval * 1000) <= DateTime.Now)
                 {
@@ -168,15 +170,15 @@ namespace Server
                 {
                     try
                     {
-                        tasks.Add(PacketHandler.ReceivePackets(client, HandlePacket, true));
+                        tasks.Add(PacketHandler.ReceivePackets(client.Key, HandlePacket, true));
                     }
                     catch (SocketException)
                     {
-                        HandleDisconnectedClient(client);
+                        HandleDisconnectedClient(client.Key);
                     }
                     catch (IOException)
                     {
-                        HandleDisconnectedClient(client);
+                        HandleDisconnectedClient(client.Key);
                     }
                 }
 
@@ -192,7 +194,7 @@ namespace Server
             // Disconnect any clients still here
             Parallel.ForEach(_clients, (client) =>
             {
-                DisconnectClient(client, "The server is being shutdown.");
+                DisconnectClient(client.Key, "The server is being shutdown.");
             });
 
             // Cleanup our resources
@@ -221,6 +223,47 @@ namespace Server
                     case "placebomb":
                         _game?.PlaceBomb(client);
                         Console.WriteLine("Client attempted to place a bomb.");
+                        break;
+                    case "playername":
+                        string playerName = packet.Message;
+
+                        // Sanity check if name already exists
+                        if (_clients.Any(a => a.Value != null && a.Value.Equals(playerName, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            DisconnectClient(client, $"Name: [{playerName}] is already taken.");
+                            return;
+                        }
+
+                        if (_clients.ContainsKey(client))
+                            _clients[client] = playerName;
+
+                        // Send a welcome message
+                        string msg = $"Welcome to the Bomberman Server {playerName}.";
+                        SendPacket(client, new Packet("message", msg));
+
+                        WaitingLobby.Add(client);
+
+                        // Add all clients in waiting lobby to the client's lobby
+                        foreach (var c in _clients.Where(a => a.Value != null))
+                            SendPacket(client, new Packet("joinwaitinglobby", c.Value));
+
+                        // Tell other clients that we joined the waiting lobby
+                        foreach (var c in _clients.Where(a => a.Value != null))
+                        {
+                            if (c.Key != client)
+                                SendPacket(c.Key, new Packet("joinwaitinglobby", playerName));
+                        }
+
+                        // TODO: Remove this part and rework it so all clients instantly join after all readied up
+                        /*
+                        if (_clients.Any() && _game == null)
+                            _game = new GameLogic.Game(_clients, out _players);
+                        else if (_game != null) 
+                            _game.AddPlayer(client);
+                        */
+                        break;
+                    case "readyplayer":
+                        //TODO:
                         break;
                     default:
                         Console.WriteLine("Unhandled packet: " + packet.ToString());
@@ -255,19 +298,10 @@ namespace Server
             }
 
             // Store them and put them in the game
-            _clients.Add(newClient);
+            _clients.Add(newClient, null);
 
             // Add client
             _timeSinceLastHeartbeat.Add(newClient, new HeartbeatCheck(newClient));
-
-            if (_clients.Any() && _game == null)
-                _game = new GameLogic.Game(_clients, out _players);
-            else if (_game != null)
-                _game.AddPlayer(newClient);
-
-            // Send a welcome message
-            string msg = "Welcome to the Bomberman Server.";
-            SendPacket(newClient, new Packet("message", msg));
         }
 
         // Will attempt to gracefully disconnect a TcpClient
@@ -293,14 +327,26 @@ namespace Server
         public void HandleDisconnectedClient(TcpClient client)
         {
             // We already handled this client, this call came from lingering packets
-            if (!_clients.Contains(client)) return;
+            if (!_clients.ContainsKey(client)) return;
 
             Console.WriteLine("Client lost connection.");
+
+            // First notify other waiting lobby clients if this one is still in waiting lobby
+            if (WaitingLobby.Contains(client))
+            {
+                foreach (var c in WaitingLobby)
+                {
+                    if (c != client)
+                        SendPacket(c, new Packet("removefromwaitinglobby", _clients[client]));
+                }
+            }
 
             // Remove from collections and free resources
             _timeSinceLastHeartbeat.Remove(client);
             _clients.Remove(client);
             _players?.Remove(client);
+            WaitingLobby.Remove(client);
+
             CleanupClient(client);
         }
 

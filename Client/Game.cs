@@ -22,6 +22,7 @@ namespace Bomberman.Client
 
         public static GridScreen GridScreen { get; private set; }
         public static MainMenuScreen MainMenuScreen { get; private set; }
+        public static ClientWaitingLobby ClientWaitingLobby { get; set; }
 
         private static void Main()
         {
@@ -39,8 +40,9 @@ namespace Bomberman.Client
 
         private static void Init()
         {
+            var fontMaster = new FontMaster(Texture2D.FromFile(SadConsole.Game.Instance.GraphicsDevice, "Graphics/Textures/Tileset.png"), 16, 16);
+            Font = fontMaster.GetFont(Font.FontSizes.Three);
             SadConsole.Game.Instance.Window.Title = "Bomberman";
-
             InitializeMenuScreen();
         }
 
@@ -49,11 +51,16 @@ namespace Bomberman.Client
             Global.CurrentScreen = MainMenuScreen = new MainMenuScreen(GameWidth, GameHeight);
         }
 
-        public static void InitializeGameScreen()
+        public static void InitializeGameScreen(bool multiplayer)
         {
-            var fontMaster = new FontMaster(Texture2D.FromFile(SadConsole.Game.Instance.GraphicsDevice, "Graphics/Textures/Tileset.png"), 16, 16);
-            Font = fontMaster.GetFont(Font.FontSizes.Three);
             Global.CurrentScreen = GridScreen = new GridScreen(GridWidth, GridHeight, Font);
+            GridScreen.IsFocused = true;
+
+            if (multiplayer)
+            {
+                ClientWaitingLobby.IsVisible = false;
+                ClientWaitingLobby.IsFocused = false;
+            }
         }
 
         public static void Update(GameTime gameTime)

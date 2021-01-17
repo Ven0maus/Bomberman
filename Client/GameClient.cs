@@ -19,6 +19,7 @@ namespace Bomberman.Client
         private readonly string _serverIp;
         private readonly int _serverPort;
 
+        private readonly string _playerName;
         private Player _player;
         private readonly List<Player> _otherPlayers;
 
@@ -31,9 +32,10 @@ namespace Bomberman.Client
 
         private double _timeSinceLastHeartbeat = 0f;
 
-        public GameClient(string serverIp, int serverPort)
+        public GameClient(string serverIp, int serverPort, string playerName)
         {
             Client = new TcpClient();
+            _playerName = playerName;
             _serverIp = serverIp;
             _serverPort = serverPort;
             _otherPlayers = new List<Player>();
@@ -94,6 +96,8 @@ namespace Bomberman.Client
 
                 // Hook up some packet command handlers
                 _commandHandlers["bye"] = HandleBye;
+                _commandHandlers["joinwaitinglobby"] = HandleJoinWaitingLobby;
+                _commandHandlers["removefromwaitinglobby"] = HandleRemoveFromWaitingLobby;
                 _commandHandlers["message"] = HandleMessage;
                 _commandHandlers["heartbeat"] = HandleHeartbeat;
                 _commandHandlers["move"] = HandleMovement;
@@ -106,6 +110,10 @@ namespace Bomberman.Client
                 _commandHandlers["detonatePhase2"] = HandleDetonationPhase2;
                 _commandHandlers["spawnpowerup"] = HandlePowerupSpawn;
                 _commandHandlers["pickuppowerup"] = HandlePowerupPickup;
+                _commandHandlers["gamestart"] = HandleGameStart;
+
+                // Send our player name to the server
+                SendPacket(Client, new Packet("playername", _playerName));
 
                 return true;
             }
@@ -116,6 +124,30 @@ namespace Bomberman.Client
             }
 
             return false;
+        }
+
+        private Task HandleRemoveFromWaitingLobby(string message)
+        {
+            Game.ClientWaitingLobby.RemovePlayer(message);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleGameStart(string message)
+        {
+            //Game.InitializeGameScreen(true);
+            Console.WriteLine("Game started!");
+            return Task.CompletedTask;
+        }
+
+        private Task HandleJoinWaitingLobby(string message)
+        {
+            if (Game.ClientWaitingLobby == null)
+                Game.ClientWaitingLobby = new ClientWaitingLobby(Game.GameWidth, Game.GameHeight);
+            Game.ClientWaitingLobby.IsVisible = true;
+            Game.ClientWaitingLobby.IsFocused = true;
+            SadConsole.Global.CurrentScreen = Game.ClientWaitingLobby;
+            Game.ClientWaitingLobby.AddPlayer(message);
+            return Task.CompletedTask;
         }
 
         private Task HandlePowerupPickup(string message)
@@ -236,9 +268,11 @@ namespace Bomberman.Client
         {
             var coords = message.Split(':');
             var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
+            var playerName = coords[3];
             _otherPlayers.Add(new Player(position, int.Parse(coords[0]), false)
             {
-                Parent = Game.GridScreen
+                Parent = Game.GridScreen,
+                Name = playerName
             });
             return Task.CompletedTask;
         }
@@ -249,7 +283,8 @@ namespace Bomberman.Client
             var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
             _player = new Player(position, int.Parse(coords[0]), true)
             {
-                Parent = Game.GridScreen
+                Parent = Game.GridScreen,
+                Name = _playerName
             };
             return Task.CompletedTask;
         }
@@ -276,6 +311,10 @@ namespace Bomberman.Client
 
             // Will start the disconnection process in Run()
             Running = false;
+            // Go back to main menu
+            Game.MainMenuScreen.IsVisible = true;
+            Game.MainMenuScreen.IsFocused = true;
+            SadConsole.Global.CurrentScreen = Game.MainMenuScreen;
             return Task.CompletedTask; 
         }
 
@@ -351,6 +390,10 @@ namespace Bomberman.Client
                     {
                         Running = false;
                         Console.WriteLine("The server has disconnected from us ungracefully. :[");
+                        // Go back to main menu
+                        Game.MainMenuScreen.IsVisible = true;
+                        Game.MainMenuScreen.IsFocused = true;
+                        SadConsole.Global.CurrentScreen = Game.MainMenuScreen;
                     }
                 }
             }
