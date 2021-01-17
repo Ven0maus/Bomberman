@@ -17,7 +17,7 @@ namespace Server
         public static Network Instance { get; private set; }
 
         private const float HeartbeatInterval = 2f;
-        private const float GameStartCountdown = 120f;
+        private const int GameStartCountdownSeconds = 40;
 
         private readonly string _serverIp;
         private readonly int _serverPort;
@@ -65,7 +65,7 @@ namespace Server
 
             private void SendHeartbeat(TcpClient client)
             {
-                Instance.SendPacket(client, new Packet("heartbeat", "Are you alive?"));
+                Instance.SendPacket(client, new Packet("heartbeat"));
             }
         }
 
@@ -105,16 +105,26 @@ namespace Server
             WaitingLobby = new Dictionary<TcpClient, bool>();
 
             // Countdown timer for game start once 2 or more players are ready
-            _gameStartTimer = new System.Timers.Timer(GameStartCountdown * 1000);
+            _gameStartTimer = new System.Timers.Timer(1000);
+            _gameStartTimer.AutoReset = true;
             _gameStartTimer.Elapsed += GameStartTimer_Elapsed;
 
             _heartbeatTimer = new System.Timers.Timer(1000);
             _heartbeatTimer.Elapsed += HeartbeatTimer_Elapsed;
         }
 
+        private int _currentCountdown = GameStartCountdownSeconds;
+        private readonly List<TcpClient> _countdownNotified = new List<TcpClient>();
         private void GameStartTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            StartGame();
+            _currentCountdown--;
+            if (_currentCountdown == 0)
+            {
+                // Reset
+                _currentCountdown = GameStartCountdownSeconds;
+                _gameStartTimer.Stop();
+                StartGame();
+            }
         }
 
         private void StartGame()
@@ -232,6 +242,7 @@ namespace Server
 
         private void HandlePacket(TcpClient client, Packet packet)
         {
+            _timeSinceLastHeartbeat[client].Reset();
             if (packet == null) return;
 
             try
@@ -239,8 +250,8 @@ namespace Server
                 switch (packet.Command)
                 {
                     case "heartbeat":
-                        Console.WriteLine("Received heartbeat response: " + packet.Message);
-                        break;
+                        // Automatically handled
+                        return;
                     case "move":
                         var coords = packet.Message.Split(':');
                         var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
@@ -307,25 +318,37 @@ namespace Server
                         if (WaitingLobby.Count(a => a.Value) == WaitingLobby.Count)
                         {
                             _gameStartTimer.Stop();
+                            _countdownNotified.Clear();
+                            _currentCountdown = GameStartCountdownSeconds;
                             StartGame();
                         }
                         else if (WaitingLobby.Count(a => a.Value) >= 2)
                         {
+                            // Let clients know timer has started
+                            foreach (var p in WaitingLobby.Where(a => a.Value && !_countdownNotified.Contains(a.Key)))
+                            {
+                                _countdownNotified.Add(p.Key);
+                                SendPacket(p.Key, new Packet("gamecountdown", _currentCountdown.ToString()));
+                            }
                             _gameStartTimer.Start();
-                            // TODO: Let clients know timer has started
                         }
                         else
                         {
+                            _countdownNotified.Clear();
                             _gameStartTimer.Stop();
+                            _currentCountdown = GameStartCountdownSeconds;
+
+                            // Notify everyone that countdown stopped
+                            foreach (var p in WaitingLobby.Where(a => a.Value))
+                            {
+                                SendPacket(p.Key, new Packet("gamecountdown", "0"));
+                            }
                         }
                         break;
                     default:
                         Console.WriteLine("Unhandled packet: " + packet.ToString());
                         break;
                 }
-
-                // Reset heartbeat when we receive something
-                _timeSinceLastHeartbeat[client].Reset();
             }
             catch(SocketException)
             {
@@ -388,14 +411,25 @@ namespace Server
             // First notify other waiting lobby clients if this one is still in waiting lobby
             if (WaitingLobby.ContainsKey(client))
             {
+                _countdownNotified.Remove(client);
+
                 var newLobby = WaitingLobby.Where(a => a.Key != client).ToList();
                 if (newLobby.Count(a => a.Value) == newLobby.Count)
                 {
+                    _gameStartTimer.Stop();
+                    _currentCountdown = GameStartCountdownSeconds;
                     StartGame();
                 }
-                else if (WaitingLobby.Count(a => a.Value) < 2)
+                else if (newLobby.Count(a => a.Value) < 2)
                 {
                     _gameStartTimer.Stop();
+                    _currentCountdown = GameStartCountdownSeconds;
+
+                    // Notify everyone that countdown stopped
+                    foreach (var p in newLobby.Where(a => a.Value))
+                    {
+                        SendPacket(p.Key, new Packet("gamecountdown", "0"));
+                    }
                 }
 
                 foreach (var c in WaitingLobby)

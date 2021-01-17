@@ -114,6 +114,7 @@ namespace Bomberman.Client
                 _commandHandlers["gamestart"] = HandleGameStart;
                 _commandHandlers["ready"] = HandleReady;
                 _commandHandlers["unready"] = HandleUnReady;
+                _commandHandlers["gamecountdown"] = HandleGameCountdown;
 
                 // Send our player name to the server
                 SendPacket(Client, new Packet("playername", PlayerName));
@@ -127,6 +128,17 @@ namespace Bomberman.Client
             }
 
             return false;
+        }
+
+        private Task HandleGameCountdown(string message)
+        {
+            Console.WriteLine("Game countdown has begon!");
+            var time = int.Parse(message);
+            if (time > 0)
+                Game.ClientWaitingLobby.StartCountdown(time);
+            else
+                Game.ClientWaitingLobby.StopCountdown();
+            return Task.CompletedTask;
         }
 
         private Task HandleUnReady(string message)
@@ -347,9 +359,7 @@ namespace Bomberman.Client
         private Task HandleHeartbeat(string message)
         {
             _timeSinceLastHeartbeat = 0f;
-            Console.WriteLine("Received heartbeat request: " + message);
-            SendPacket(Client, new Packet("heartbeat", "yes"));
-            Console.WriteLine("Send heartbeat response: yes");
+            SendPacket(Client, new Packet("heartbeat"));
             return Task.CompletedTask;
         }
 

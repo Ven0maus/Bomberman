@@ -16,6 +16,9 @@ namespace Bomberman.Client.Graphics
         private bool _ready;
         private Button _readyUpButton;
 
+        private int _countDown;
+        private bool _countdownBegon;
+
         public ClientWaitingLobby(int width, int height) : base(width, height) 
         {
             _width = width;
@@ -33,6 +36,39 @@ namespace Bomberman.Client.Graphics
             _playerSlots = new Dictionary<string, bool>();
 
             AddButtons();
+        }
+
+        private double _timePassed;
+        public override void Update(System.TimeSpan time)
+        {
+            base.Update(time);
+
+            if (_countdownBegon)
+            {
+                _timePassed += time.Milliseconds;
+                if (_timePassed >= 1000 && _countDown > 0)
+                {
+                    _timePassed = 0;
+                    _countDown--;
+
+                    if (_countDown == 0)
+                        _countdownBegon = false;
+
+                    Invalidate();
+                }
+            }
+        }
+
+        public void StartCountdown(int startNr)
+        {
+            _countDown = startNr;
+            _countdownBegon = true;
+        }
+
+        public void StopCountdown()
+        {
+            _countdownBegon = false;
+            _countDown = 0;
         }
 
         public void AddButtons()
@@ -112,6 +148,11 @@ __________              ___.
 
             if (_playerSlots != null)
                 ShowPlayerSlots();
+
+            if (_countdownBegon)
+            {
+                Print((_width / 2) - 10, (_height / 2) - 8, "Next game starts in: " + _countDown);
+            }
         }
 
         public void ShowPlayerSlots()
