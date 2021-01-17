@@ -345,6 +345,7 @@ namespace Server
             _clients.Remove(client);
             _players?.Remove(client);
             WaitingLobby.Remove(client);
+            PacketHandler.RemoveClientPacketProtocol(client);
             CleanupClient(client);
         }
 

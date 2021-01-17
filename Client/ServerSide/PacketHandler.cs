@@ -69,7 +69,7 @@ namespace Bomberman.Client.ServerSide
                 }
 
                 if (packetProtocol.ContainsReadedData)
-                    Console.WriteLine($"No data left in stream but packet contains readed data [{(server ? "Server" : "Client")}].");
+                    Console.WriteLine($"Warning. No data left in stream but packet contains readed data [{(server ? "Server" : "Client")}].");
             }
             catch (Exception e)
             {
@@ -78,6 +78,20 @@ namespace Bomberman.Client.ServerSide
                 Console.WriteLine("Reason: {0}", e.Message);
                 throw;
             }
+        }
+
+        public static async void RemoveClientPacketProtocol(TcpClient client)
+        {
+            await Task.Run(async () =>
+            {
+                if (_packetProtocols.TryGetValue(client, out PacketProtocol packetProtocol))
+                {
+                    // Allow one second to process packet data
+                    if (packetProtocol.ContainsReadedData)
+                        await Task.Delay(1000);
+                }
+                _packetProtocols.Remove(client);
+            });
         }
     }
 }

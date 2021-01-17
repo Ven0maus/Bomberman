@@ -173,7 +173,6 @@ namespace Bomberman.Client.ServerSide
                     }
                     else
                     {
-                        Console.WriteLine("Received packet length: " + (length + 4));
                         // Create the data buffer and start reading into it
                         _dataBuffer = new byte[length];
                         _bytesReceived = 0;

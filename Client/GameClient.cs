@@ -70,6 +70,7 @@ namespace Bomberman.Client
 
         private void CleanupNetworkResources()
         {
+            PacketHandler.RemoveClientPacketProtocol(Client);
             if (Client.Connected)
                 Client.GetStream().Close();
             Client.Close();
@@ -322,7 +323,7 @@ namespace Bomberman.Client
         // Just prints out a message sent from the server
         private Task HandleMessage(string message)
         {
-            Console.Write(message);
+            Console.WriteLine(message);
             return Task.CompletedTask;
         }
 
