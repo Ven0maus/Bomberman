@@ -82,6 +82,8 @@ namespace Bomberman.Client.ServerSide
         /// </remarks>
         public Action<byte[]> MessageArrived { get; set; }
 
+        public bool ContainsReadedData { get { return _dataBuffer != null || _bytesReceived > 0; } }
+
         /// <summary>
         /// Notifies the <see cref="PacketProtocol"/> instance that incoming data has been received from the stream. This method will invoke <see cref="MessageArrived"/> as necessary.
         /// </summary>
@@ -91,7 +93,7 @@ namespace Bomberman.Client.ServerSide
         /// </remarks>
         /// <param name="data">The data received from the stream. Cannot be null.</param>
         /// <exception cref="System.Net.ProtocolViolationException">If the data received is not a properly-formed message.</exception>
-        public void DataReceived(byte[] data)
+        public void DataReceived(byte[] data, int totalBytes)
         {
             // Process the incoming data in chunks, as the ReadCompleted requests it
 
@@ -99,7 +101,7 @@ namespace Bomberman.Client.ServerSide
             //  incoming buffer looking for messages.
 
             int i = 0;
-            while (i != data.Length)
+            while (i != totalBytes)
             {
                 // Determine how many bytes we want to transfer to the buffer and transfer them
                 int bytesAvailable = data.Length - i;
@@ -171,6 +173,7 @@ namespace Bomberman.Client.ServerSide
                     }
                     else
                     {
+                        Console.WriteLine("Received packet length: " + (length + 4));
                         // Create the data buffer and start reading into it
                         _dataBuffer = new byte[length];
                         _bytesReceived = 0;

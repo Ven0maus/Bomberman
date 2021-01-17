@@ -3,6 +3,7 @@ using SadConsole.Controls;
 using Microsoft.Xna.Framework;
 using SadConsole.Themes;
 using System.Linq;
+using System;
 
 namespace Bomberman.Client.Graphics
 {
@@ -10,6 +11,8 @@ namespace Bomberman.Client.Graphics
     {
         private readonly int _width, _height;
         private readonly TextBox _serverIpBox, _serverPortBox, _playerName;
+
+        public bool Connecting = false;
 
         public ServerConnectionScreen(int width, int height) : base(width, height)
         {
@@ -123,7 +126,7 @@ __________              ___.
             Add(backButton);
         }
 
-        private void BackButton_Click(object sender, System.EventArgs e)
+        private void BackButton_Click(object sender, EventArgs e)
         {
             Game.MainMenuScreen.IsVisible = true;
             Global.CurrentScreen = Game.MainMenuScreen;
@@ -131,7 +134,27 @@ __________              ___.
             IsFocused = false;
         }
 
-        private void ConnectButton_Click(object sender, System.EventArgs e)
+        private double _timePassed = 0f;
+        public override void Update(TimeSpan time)
+        {
+            base.Update(time);
+            if (Connecting)
+            {
+                _timePassed += time.Milliseconds;
+                if (_timePassed >= 5000)
+                {
+                    _timePassed = 0f;
+                    Connecting = false;
+
+                    // Show server connection screen again
+                    IsVisible = true;
+                    Global.CurrentScreen = this;
+                    IsFocused = true;
+                }
+            }
+        }
+
+        private void ConnectButton_Click(object sender, EventArgs e)
         {
             if (!int.TryParse(_serverPortBox.Text, out int port))
             {
@@ -151,8 +174,9 @@ __________              ___.
                 IsFocused = false;
                 IsVisible = false;
 
-                // Let server send player to client waiting lobby
-                
+                // Server will send player to the client waiting lobby
+                // TODO: We should start a timer here, incase server packet isn't received by client
+                Connecting = true;
             }
             else
             {

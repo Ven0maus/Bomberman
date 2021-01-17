@@ -32,6 +32,42 @@ namespace Bomberman.Client.Graphics
             {
                 _playerSlots.Add(i, null);
             }
+
+            AddButtons();
+        }
+
+        public void AddButtons()
+        {
+            var yCoord = (_height / 2) + 14;
+            var leaveLobbyButton = new Button(15, 3)
+            {
+                Text = "Leave lobby",
+                Position = new Point((_width / 2) - 14, yCoord),
+                UseMouse = true,
+                UseKeyboard = false,
+            };
+            leaveLobbyButton.Click += LeaveLobbyButton_Click;
+            Add(leaveLobbyButton);
+
+            var readyUpButton = new Button(12, 3)
+            {
+                Text = "Ready up",
+                Position = new Point((_width / 2) + 2, yCoord),
+                UseMouse = true,
+                UseKeyboard = false,
+            };
+            readyUpButton.Click += ReadyUpButton_Click;
+            Add(readyUpButton);
+        }
+
+        private void ReadyUpButton_Click(object sender, System.EventArgs e)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        private void LeaveLobbyButton_Click(object sender, System.EventArgs e)
+        {
+            throw new System.NotImplementedException();
         }
 
         public void PrintTitle()

@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Bomberman.Client.ServerSide
@@ -27,36 +30,46 @@ namespace Bomberman.Client.ServerSide
             }
         }
 
+        private static readonly Dictionary<TcpClient, PacketProtocol> _packetProtocols = new Dictionary<TcpClient, PacketProtocol>();
         public static async Task ReceivePackets(TcpClient client, Action<TcpClient, Packet> action, bool server)
         {
             try
             {
-                // First check there is data available
+                // First check if there is data available
                 if (client.Available == 0)
                     return;
 
-                var packetProtocol = new PacketProtocol(MaxPacketSize);
-                packetProtocol.MessageArrived += (data) =>
+                if (!_packetProtocols.TryGetValue(client, out PacketProtocol packetProtocol))
                 {
-                    if (data.Length == 0)
+                    packetProtocol = new PacketProtocol(MaxPacketSize);
+                    packetProtocol.MessageArrived += (data) =>
                     {
-                        return;
-                    }
+                        if (data.Length == 0)
+                        {
+                            action(client, null);
+                            return;
+                        }
 
-                    // Convert data into a packet datatype
-                    string jsonString = Encoding.UTF8.GetString(data);
-                    var packet = Packet.FromJson(jsonString);
-                    action(client, packet);
-                };
+                        // Convert data into a packet datatype
+                        string jsonString = Encoding.UTF8.GetString(data);
+                        var packet = Packet.FromJson(jsonString);
+                        action(client, packet);
+                    };
+                    Console.WriteLine($"Created packet protocol: [{(server ? "Server" : "Client")}]");
+                    _packetProtocols.Add(client, packetProtocol);
+                }
 
                 // Read data through protocol
                 var stream = client.GetStream();
                 while (stream.DataAvailable && stream.CanRead)
                 {
                     var readBuffer = new byte[MaxPacketSize];
-                    await stream.ReadAsync(readBuffer);
-                    packetProtocol.DataReceived(readBuffer);
+                    int totalRead = await stream.ReadAsync(readBuffer);
+                    packetProtocol.DataReceived(readBuffer, totalRead);
                 }
+
+                if (packetProtocol.ContainsReadedData)
+                    Console.WriteLine($"No data left in stream but packet contains readed data [{(server ? "Server" : "Client")}].");
             }
             catch (Exception e)
             {

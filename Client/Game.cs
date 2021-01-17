@@ -42,6 +42,7 @@ namespace Bomberman.Client
         {
             var fontMaster = new FontMaster(Texture2D.FromFile(SadConsole.Game.Instance.GraphicsDevice, "Graphics/Textures/Tileset.png"), 16, 16);
             Font = fontMaster.GetFont(Font.FontSizes.Three);
+
             SadConsole.Game.Instance.Window.Title = "Bomberman";
             InitializeMenuScreen();
         }

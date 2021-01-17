@@ -160,6 +160,8 @@ namespace Server
             var tasks = new List<Task>();
             while (_running)
             {
+                tasks.RemoveAll(a => a.IsCompleted);
+
                 if (_listener.Pending())
                 {
                     tasks.Add(HandleNewConnection());
@@ -181,8 +183,6 @@ namespace Server
                         HandleDisconnectedClient(client.Key);
                     }
                 }
-
-                tasks.RemoveAll(a => a.IsCompleted);
 
                 // Take a small nap
                 Thread.Sleep(10);
@@ -248,10 +248,9 @@ namespace Server
                             SendPacket(client, new Packet("joinwaitinglobby", c.Value));
 
                         // Tell other clients that we joined the waiting lobby
-                        foreach (var c in _clients.Where(a => a.Value != null))
+                        foreach (var c in _clients.Where(a => a.Value != null && a.Key != client))
                         {
-                            if (c.Key != client)
-                                SendPacket(c.Key, new Packet("joinwaitinglobby", playerName));
+                            SendPacket(c.Key, new Packet("joinwaitinglobby", playerName));
                         }
 
                         // TODO: Remove this part and rework it so all clients instantly join after all readied up
@@ -346,7 +345,6 @@ namespace Server
             _clients.Remove(client);
             _players?.Remove(client);
             WaitingLobby.Remove(client);
-
             CleanupClient(client);
         }
 

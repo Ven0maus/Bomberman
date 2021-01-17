@@ -147,6 +147,7 @@ namespace Bomberman.Client
             Game.ClientWaitingLobby.IsFocused = true;
             SadConsole.Global.CurrentScreen = Game.ClientWaitingLobby;
             Game.ClientWaitingLobby.AddPlayer(message);
+            Game.MainMenuScreen.ServerConnectionScreen.Connecting = false;
             return Task.CompletedTask;
         }
 
@@ -339,6 +340,7 @@ namespace Bomberman.Client
         {
             try
             {
+                if (packet == null) return;
                 if (_commandHandlers.ContainsKey(packet.Command))
                     _commandHandlers[packet.Command](packet.Message).GetAwaiter().GetResult();
             }
@@ -377,8 +379,8 @@ namespace Bomberman.Client
                 if (_timeSinceLastReceive > 20)
                 {
                     _timeSinceLastReceive = 0;
-                    _tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher, false));
                     _tasks.RemoveAll(a => a.IsCompleted);
+                    _tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher, false));
                 }
 
                 _timeSinceLastHeartbeat += gameTime.ElapsedGameTime.Milliseconds;
