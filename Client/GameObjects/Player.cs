@@ -11,10 +11,8 @@ namespace Bomberman.Client.GameObjects
         // Powerups
         public int MaxBombs = 1;
         public int BombStrength = 1;
+        public bool Alive { get; private set; }
         public int BombsPlaced { get; set; }
-
-        public bool Alive;
-
         public bool RequestedMovement { get; set; }
         public bool RequestBombPlacement { get; set; }
 
@@ -22,9 +20,9 @@ namespace Bomberman.Client.GameObjects
 
         public Player(Point position, int id, bool controllable = true) : base(Color.White, Color.Transparent, 18)
         {
+            Alive = true;
             Id = id;
             _controllable = controllable;
-            Alive = true;
             Position = position;
             Font = Game.Font;
             Moved += Player_Moved;
@@ -75,6 +73,14 @@ namespace Bomberman.Client.GameObjects
                     Animation.IsDirty = true;
                 }
             }
+        }
+
+        public void StartDeadAnimation()
+        {
+            // TODO: Prettify
+            Alive = false;
+            IsVisible = false;
+            IsFocused = false;
         }
 
         public override bool ProcessKeyboard(SadConsole.Input.Keyboard info)

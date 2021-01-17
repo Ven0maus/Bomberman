@@ -115,6 +115,8 @@ namespace Bomberman.Client
                 _commandHandlers["ready"] = HandleReady;
                 _commandHandlers["unready"] = HandleUnReady;
                 _commandHandlers["gamecountdown"] = HandleGameCountdown;
+                _commandHandlers["playerdied"] = HandlePlayerDied;
+                _commandHandlers["gameover"] = HandleGameOver;
 
                 // Send our player name to the server
                 SendPacket(Client, new Packet("playername", PlayerName));
@@ -130,9 +132,47 @@ namespace Bomberman.Client
             return false;
         }
 
+        private Task HandleGameOver(string arg)
+        {
+            foreach (var p in _otherPlayers)
+            {
+                p.IsVisible = false;
+                p.Parent = null;
+            }
+            _otherPlayers.Clear();
+            _player.IsVisible = false;
+            _player.IsFocused = false;
+            _player.Parent = null;
+            _player = null;
+            foreach (var bomb in _bombsPlaced)
+            {
+                bomb.IsVisible = false;
+                bomb.Parent = null;
+            }
+            _bombsPlaced.Clear();
+            return Task.CompletedTask;
+        }
+
+        private Task HandlePlayerDied(string message)
+        {
+            var player = _otherPlayers.FirstOrDefault(a => a.Name.Equals(message, StringComparison.OrdinalIgnoreCase));
+            if (player == null)
+            {
+                if (_player.Name.Equals(message, StringComparison.OrdinalIgnoreCase))
+                    player = _player;
+
+                if (player == null)
+                {
+                    Console.WriteLine("Invalid player name suplied to death event.");
+                    return Task.CompletedTask;
+                }
+            }
+            player.StartDeadAnimation();
+            return Task.CompletedTask;
+        }
+
         private Task HandleGameCountdown(string message)
         {
-            Console.WriteLine("Game countdown has begon!");
             var time = int.Parse(message);
             if (time > 0)
                 Game.ClientWaitingLobby.StartCountdown(time);
@@ -164,7 +204,6 @@ namespace Bomberman.Client
         private Task HandleGameStart(string message)
         {
             Game.InitializeGameScreen(true);
-            Console.WriteLine("Game started!");
             return Task.CompletedTask;
         }
 
@@ -304,7 +343,6 @@ namespace Bomberman.Client
                 Parent = Game.GridScreen,
                 Name = playerName
             });
-            Console.WriteLine("Spawned other: " + playerName);
             return Task.CompletedTask;
         }
 
@@ -317,7 +355,6 @@ namespace Bomberman.Client
                 Parent = Game.GridScreen,
                 Name = PlayerName
             };
-            Console.WriteLine("Spawned ourself: " + PlayerName);
             return Task.CompletedTask;
         }
 

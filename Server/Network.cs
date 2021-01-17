@@ -16,8 +16,8 @@ namespace Server
     {
         public static Network Instance { get; private set; }
 
-        private const float HeartbeatInterval = 2f;
-        private const int GameStartCountdownSeconds = 40;
+        private const float HeartbeatInterval = 5f;
+        private const int GameStartCountdownSeconds = 30;
 
         private readonly string _serverIp;
         private readonly int _serverPort;
@@ -386,6 +386,30 @@ namespace Server
             {
                 HandleDisconnectedClient(client);
             }
+        }
+
+        public void ResetGame()
+        {
+            foreach (var player in _game.Players)
+            {
+                // Send gameover packet
+                SendPacket(player.Key, new Packet("gameover"));
+
+                // Send client to waiting lobby
+                SendPacket(player.Key, new Packet("joinwaitinglobby", _clients[player.Key]));
+
+                // Notify others that this client is in the waiting lobby
+                foreach (var p in _game.Players.Where(a => a.Key != player.Key))
+                {
+                    SendPacket(player.Key, new Packet("joinwaitinglobby", _clients[p.Key]));
+                }
+
+                // Add back to waiting lobby
+                WaitingLobby.Add(player.Key, false);
+            }
+
+            // Clear for new game
+            _game = null;
         }
 
         // Awaits for a new connection and then adds them to the waiting lobby

@@ -42,7 +42,7 @@ namespace Bomberman.Client.GameObjects
         {
             Animation[0].Foreground = Color.Transparent;
             Animation.IsDirty = true;
-
+            Parent = null;
             Game.GridScreen.IsDirty = true;
         }
     }

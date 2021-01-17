@@ -191,7 +191,19 @@ __________              ___.
 
         public void AddPlayer(string playerName)
         {
-            _playerSlots.Add(playerName, false);
+            if (_playerSlots.ContainsKey(playerName))
+            {
+                _playerSlots[playerName] = false;
+            }
+            else
+            {
+                _playerSlots.Add(playerName, false);
+            }
+            if (playerName == Game.Client.PlayerName)
+            {
+                _readyUpButton.Text = "Ready up";
+                _ready = false;
+            }
             Invalidate();
         }
     }

@@ -13,13 +13,13 @@ namespace Server.GameLogic
         public Point Position { get; set; }
 
         public readonly TcpClient Client;
-
         public bool Alive;
 
         public string Name;
 
         public PlayerContext(TcpClient client, Point position, int id)
         {
+            Alive = true;
             Client = client;
             Id = id;
             Position = position;

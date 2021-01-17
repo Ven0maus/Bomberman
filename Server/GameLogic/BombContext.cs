@@ -39,6 +39,8 @@ namespace Server.GameLogic
 
         private void BombTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            if (!Network.Instance.GameOngoing)
+                _done = true;
             if (_done)
             {
                 _bombTimer.Stop();
@@ -174,6 +176,12 @@ namespace Server.GameLogic
 
             public void Add(DetonationData data)
             {
+                if (data == null)
+                {
+                    BombIds = null;
+                    CellPositions = null;
+                    return;
+                }
                 BombIds.AddRange(data.BombIds.Where(a => !BombIds.Contains(a)));
                 CellPositions.AddRange(data.CellPositions.Where(a => !CellPositions.Contains(a)));
             }
@@ -201,9 +209,21 @@ namespace Server.GameLogic
             foreach (var pos in cellPositions)
             {
                 // Game over, kill player
-                if (_placedBy.Position == pos)
+                var deadPlayer = _game.Players.FirstOrDefault(a => a.Value.Position == pos).Value;
+                if (deadPlayer != null && deadPlayer.Alive)
                 {
-                    // TODO: Disable player until game is over
+                    deadPlayer.Alive = false;
+
+                    // Let players know this player died
+                    foreach (var player in _game.Players)
+                        Network.Instance.SendPacket(player.Key, new Packet("playerdied", deadPlayer.Name)); 
+
+                    // Check if there is 1 or no players left alive, then reset the game
+                    if (_game.Players.Count(a => a.Value.Alive) <= 1)
+                    {
+                        Network.Instance.ResetGame();
+                        return null;
+                    }
                 }
 
                 var cell = _grid.GetValue(pos.X, pos.Y);
@@ -222,6 +242,9 @@ namespace Server.GameLogic
                     data.Add(bomb.Detonate(false));
                 }
             }
+
+            if (data.CellPositions == null || data.BombIds == null)
+                return null;
 
             if (sendPackets)
             {

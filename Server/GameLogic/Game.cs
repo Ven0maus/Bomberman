@@ -116,6 +116,8 @@ namespace Server.GameLogic
             if (player == null)
                 throw new Exception("Player is null!");
 
+            if (!player.Alive) return;
+
             var previous = player.Position;
             var diffX = previous.X - position.X;
             var diffY = previous.Y - position.Y;

@@ -69,13 +69,5 @@ namespace Bomberman.Client
             // Will be null for single player games
             Client?.Update(gameTime);
         }
-
-        public static void GameOver(Player player)
-        {
-            player.Alive = false;
-
-            // TODO: Wait for end of game by other players or until everyone left
-            // Then go back to the lobby to ready up for a new game
-        }
     }
 }
