@@ -376,7 +376,7 @@ namespace Server
             // We already handled this client, this call came from lingering packets
             if (!_clients.ContainsKey(client)) return;
 
-            Console.WriteLine("Client lost connection.");
+            Console.WriteLine("Client disconnected.");
 
             // First notify other waiting lobby clients if this one is still in waiting lobby
             if (WaitingLobby.ContainsKey(client))
