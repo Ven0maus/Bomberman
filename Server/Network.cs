@@ -367,6 +367,12 @@ namespace Server
                             }
                         }
 
+                        // Inform client to stop countdown if hes not ready, but >= 2 are
+                        if (_isCountingDown && !ready)
+                        {
+                            SendPacket(client, new Packet("gamecountdown", "0"));
+                        }
+
                         // Let clients know the client has readied/unreadied
                         foreach (var c in WaitingLobby.Where(a => a.Key != client))
                         {

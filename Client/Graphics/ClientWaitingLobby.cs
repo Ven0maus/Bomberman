@@ -63,12 +63,14 @@ namespace Bomberman.Client.Graphics
         {
             _countDown = startNr;
             _countdownBegon = true;
+            Invalidate();
         }
 
         public void StopCountdown()
         {
             _countdownBegon = false;
             _countDown = 0;
+            Invalidate();
         }
 
         public void AddButtons()
