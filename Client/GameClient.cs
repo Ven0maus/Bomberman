@@ -143,13 +143,15 @@ namespace Bomberman.Client
 
         private Task HandleUnReady(string message)
         {
-            Game.ClientWaitingLobby.SetReady(message, false);
+            if (Game.GridScreen == null)
+                Game.ClientWaitingLobby.SetReady(message, false);
             return Task.CompletedTask;
         }
 
         private Task HandleReady(string message)
         {
-            Game.ClientWaitingLobby.SetReady(message, true);
+            if (Game.GridScreen == null)
+                Game.ClientWaitingLobby.SetReady(message, true);
             return Task.CompletedTask;
         }
 

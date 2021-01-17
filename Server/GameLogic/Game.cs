@@ -40,7 +40,19 @@ namespace Server.GameLogic
             players = Players;
 
             // Remove from waiting lobby
-            Network.Instance.WaitingLobby.Clear();
+            foreach (var player in Players)
+            {
+                Network.Instance.WaitingLobby.Remove(player.Key);
+            }
+
+            // Tell who is left to remove the players that went in game
+            foreach (var player in Network.Instance.WaitingLobby)
+            {
+                foreach (var p in Players)
+                {
+                    Network.Instance.SendPacket(player.Key, new Packet("removefromwaitinglobby", Network.Instance.GetClientPlayerName(p.Key)));
+                }
+            }
 
             // Generate server-side grid
             Context = new GridContext(this, Bomberman.Client.Game.GridWidth, Bomberman.Client.Game.GridHeight);

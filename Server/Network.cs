@@ -69,6 +69,13 @@ namespace Server
             }
         }
 
+        public string GetClientPlayerName(TcpClient client)
+        {
+            if (_clients.TryGetValue(client, out string playerName))
+                return playerName;
+            return null;
+        }
+
         public async void SendPacket(TcpClient client, Packet packet)
         {
             try
@@ -114,10 +121,16 @@ namespace Server
         }
 
         private int _currentCountdown = GameStartCountdownSeconds;
-        private readonly List<TcpClient> _countdownNotified = new List<TcpClient>();
         private void GameStartTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             _currentCountdown--;
+
+            // Let clients know timer has started
+            foreach (var p in WaitingLobby.Where(a => a.Value))
+            {
+                SendPacket(p.Key, new Packet("gamecountdown", _currentCountdown.ToString()));
+            }
+
             if (_currentCountdown == 0)
             {
                 // Reset
@@ -253,12 +266,14 @@ namespace Server
                         // Automatically handled
                         return;
                     case "move":
+                        if (_game == null) return;
                         var coords = packet.Message.Split(':');
                         var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
-                        _game?.Move(client, position);
+                        _game.Move(client, position);
                         break;
                     case "placebomb":
-                        _game?.PlaceBomb(client);
+                        if (_game == null) return;
+                        _game.PlaceBomb(client);
                         Console.WriteLine("Client attempted to place a bomb.");
                         break;
                     case "bye":
@@ -283,12 +298,12 @@ namespace Server
 
                         WaitingLobby.Add(client, false);
 
-                        // Add all clients in waiting lobby to the client's lobby
-                        foreach (var c in _clients.Where(a => a.Value != null))
-                            SendPacket(client, new Packet("joinwaitinglobby", c.Value));
+                        // Add all clients in waiting lobby to the client's lobby, including himself
+                        foreach (var c in WaitingLobby)
+                            SendPacket(client, new Packet("joinwaitinglobby", _clients[c.Key]));
 
                         // Tell other clients that we joined the waiting lobby
-                        foreach (var c in _clients.Where(a => a.Value != null && a.Key != client))
+                        foreach (var c in WaitingLobby.Where(a => a.Key != client))
                         {
                             SendPacket(c.Key, new Packet("joinwaitinglobby", playerName));
                         }
@@ -310,31 +325,27 @@ namespace Server
                         }
 
                         // If a game is already ongoing, we don't need to overwrite the current with new players
-                        if (GameOngoing) return;
+                        if (GameOngoing)
+                        {
+                            SendPacket(client, new Packet("message", "A game is already ongoing, please wait!"));
+                            return;
+                        }
 
                         // Check if more than one client is ready then start the countdown
                         // Else stop the countdown and reset it
                         // If all clients are ready, start game instantly.
-                        if (WaitingLobby.Count(a => a.Value) == WaitingLobby.Count)
+                        if (WaitingLobby.Count != 0 && WaitingLobby.Count(a => a.Value) == WaitingLobby.Count)
                         {
                             _gameStartTimer.Stop();
-                            _countdownNotified.Clear();
                             _currentCountdown = GameStartCountdownSeconds;
                             StartGame();
                         }
                         else if (WaitingLobby.Count(a => a.Value) >= 2)
                         {
-                            // Let clients know timer has started
-                            foreach (var p in WaitingLobby.Where(a => a.Value && !_countdownNotified.Contains(a.Key)))
-                            {
-                                _countdownNotified.Add(p.Key);
-                                SendPacket(p.Key, new Packet("gamecountdown", _currentCountdown.ToString()));
-                            }
                             _gameStartTimer.Start();
                         }
                         else
                         {
-                            _countdownNotified.Clear();
                             _gameStartTimer.Stop();
                             _currentCountdown = GameStartCountdownSeconds;
 
@@ -411,24 +422,25 @@ namespace Server
             // First notify other waiting lobby clients if this one is still in waiting lobby
             if (WaitingLobby.ContainsKey(client))
             {
-                _countdownNotified.Remove(client);
-
-                var newLobby = WaitingLobby.Where(a => a.Key != client).ToList();
-                if (newLobby.Count(a => a.Value) == newLobby.Count)
+                if (!GameOngoing)
                 {
-                    _gameStartTimer.Stop();
-                    _currentCountdown = GameStartCountdownSeconds;
-                    StartGame();
-                }
-                else if (newLobby.Count(a => a.Value) < 2)
-                {
-                    _gameStartTimer.Stop();
-                    _currentCountdown = GameStartCountdownSeconds;
-
-                    // Notify everyone that countdown stopped
-                    foreach (var p in newLobby.Where(a => a.Value))
+                    var newLobby = WaitingLobby.Where(a => a.Key != client).ToList();
+                    if (newLobby.Count != 0 && newLobby.Count(a => a.Value) == newLobby.Count)
                     {
-                        SendPacket(p.Key, new Packet("gamecountdown", "0"));
+                        _gameStartTimer.Stop();
+                        _currentCountdown = GameStartCountdownSeconds;
+                        StartGame();
+                    }
+                    else if (newLobby.Count != 0 && newLobby.Count(a => a.Value) < 2)
+                    {
+                        _gameStartTimer.Stop();
+                        _currentCountdown = GameStartCountdownSeconds;
+
+                        // Notify everyone that countdown stopped
+                        foreach (var p in newLobby.Where(a => a.Value))
+                        {
+                            SendPacket(p.Key, new Packet("gamecountdown", "0"));
+                        }
                     }
                 }
 
