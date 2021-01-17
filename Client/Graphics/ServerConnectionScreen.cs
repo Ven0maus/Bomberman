@@ -132,7 +132,9 @@ __________              ___.
             {
                 IsFocused = false;
                 IsVisible = false;
-                Game.InitializeGameScreen();
+
+                // Send player to client waiting lobby
+
             }
             else
             {
