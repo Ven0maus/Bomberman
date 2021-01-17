@@ -381,6 +381,16 @@ namespace Server
             // First notify other waiting lobby clients if this one is still in waiting lobby
             if (WaitingLobby.ContainsKey(client))
             {
+                var newLobby = WaitingLobby.Where(a => a.Key != client).ToList();
+                if (newLobby.Count(a => a.Value) == newLobby.Count)
+                {
+                    StartGame();
+                }
+                else if (WaitingLobby.Count(a => a.Value) < 2)
+                {
+                    _gameStartTimer.Stop();
+                }
+
                 foreach (var c in WaitingLobby)
                 {
                     if (c.Key != client)
