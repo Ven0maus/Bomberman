@@ -9,7 +9,7 @@ namespace Bomberman.Client
 {
     public class Game
     {
-        public static GameClient Client { get; private set; }
+        public static GameClient Client { get; set; }
 
         public const int GameWidth = 90;
         public const int GameHeight = 45;
@@ -21,6 +21,7 @@ namespace Bomberman.Client
         public static Font Font { get; private set; }
 
         public static GridScreen GridScreen { get; private set; }
+        public static MainMenuScreen MainMenuScreen { get; private set; }
 
         private static void Main()
         {
@@ -38,18 +39,27 @@ namespace Bomberman.Client
 
         private static void Init()
         {
-            Client = new GameClient("127.0.0.1", 25565);
-            if (Client.Connect())
-            {
-                var fontMaster = new FontMaster(Texture2D.FromFile(SadConsole.Game.Instance.GraphicsDevice, "Graphics/Textures/Tileset.png"), 16, 16);
-                Font = fontMaster.GetFont(Font.FontSizes.Three);
-                Global.CurrentScreen = GridScreen = new GridScreen(GridWidth, GridHeight, Font);
-            }
+            SadConsole.Game.Instance.Window.Title = "Bomberman";
+
+            InitializeMenuScreen();
+        }
+
+        private static void InitializeMenuScreen()
+        {
+            Global.CurrentScreen = MainMenuScreen = new MainMenuScreen(GameWidth, GameHeight);
+        }
+
+        public static void InitializeGameScreen()
+        {
+            var fontMaster = new FontMaster(Texture2D.FromFile(SadConsole.Game.Instance.GraphicsDevice, "Graphics/Textures/Tileset.png"), 16, 16);
+            Font = fontMaster.GetFont(Font.FontSizes.Three);
+            Global.CurrentScreen = GridScreen = new GridScreen(GridWidth, GridHeight, Font);
         }
 
         public static void Update(GameTime gameTime)
         {
-            Client.Update(gameTime);
+            // Will be null for single player games
+            Client?.Update(gameTime);
         }
 
         public static void GameOver(Player player)
