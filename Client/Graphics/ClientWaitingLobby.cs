@@ -113,7 +113,7 @@ namespace Bomberman.Client.Graphics
             Game.MainMenuScreen.IsVisible = true;
             Game.MainMenuScreen.IsFocused = true;
             Global.CurrentScreen = Game.MainMenuScreen;
-            RemovePlayer(Game.Client.PlayerName);
+            _playerSlots = new Dictionary<string, bool>();
             IsVisible = false;
             IsFocused = false;
         }
@@ -180,8 +180,10 @@ __________              ___.
 
         public void SetReady(string playerName, bool ready)
         {
+            System.Console.WriteLine("Before: " + string.Join(",", _playerSlots.Select(a => a.Key + ": " + a.Value)));
             if (_playerSlots.ContainsKey(playerName))
                 _playerSlots[playerName] = ready;
+            System.Console.WriteLine("After: " + string.Join(",", _playerSlots.Select(a => a.Key + ": " + a.Value)));
             Invalidate();
         }
 

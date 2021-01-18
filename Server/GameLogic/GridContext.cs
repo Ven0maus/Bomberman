@@ -46,6 +46,9 @@ namespace Server.GameLogic
                 case PowerUp.BombStrength:
                     player.BombStrength++;
                     break;
+                case PowerUp.Invicibility:
+                    player.StartInvincibility();
+                    break;
                 default:
                     break;
             }
@@ -71,12 +74,12 @@ namespace Server.GameLogic
                 for (int y = 0; y < _height; y++)
                 {
                     // Small chance to contain a random powerup
-                    if (Game.Random.Next(0, 101) <= 20)
+                    if (Game.Random.Next(0, 100) < 25)
                     {
                         var tile = GetValue(x, y);
                         if (!tile.Explored && tile.Destroyable)
                         {
-                            tile.PowerUp = (PowerUp)Game.Random.Next(1, 3);
+                            tile.PowerUp = (PowerUp)Game.Random.Next(1, 4);
                         }
                     }
                 }

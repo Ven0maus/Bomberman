@@ -1,5 +1,4 @@
-﻿using Bomberman.Client.GameObjects;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using SadConsole;
 using System.Collections.Generic;
 
@@ -9,7 +8,8 @@ namespace Bomberman.Client.Graphics
     {
         None,
         ExtraBomb,
-        BombStrength
+        BombStrength,
+        Invicibility
     }
 
     public class Tile : Cell

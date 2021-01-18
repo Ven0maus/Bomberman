@@ -1,5 +1,4 @@
-﻿using Bomberman.Client.GameObjects;
-using Bomberman.Client.Graphics;
+﻿using Bomberman.Client.Graphics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SadConsole;
@@ -20,7 +19,7 @@ namespace Bomberman.Client
 
         public static Font Font { get; private set; }
 
-        public static GridScreen GridScreen { get; private set; }
+        public static GridScreen GridScreen { get; set; }
         public static MainMenuScreen MainMenuScreen { get; private set; }
         public static ClientWaitingLobby ClientWaitingLobby { get; set; }
 

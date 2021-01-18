@@ -31,14 +31,33 @@ namespace Server.GameLogic
             new Point(Bomberman.Client.Game.GridWidth -1, Bomberman.Client.Game.GridHeight -1),
         };
 
+        private readonly List<Color> _availableColors = new List<Color>
+        {
+            Color.Red,
+            Color.Cyan,
+            Color.Orange,
+            Color.Yellow,
+            Color.Green,
+            Color.Brown,
+            Color.Magenta,
+            Color.White
+        };
+
         public bool GameOver = false;
+
+        private Color GetRandomColor()
+        {
+            var color = _availableColors[Random.Next(0, _availableColors.Count)];
+            _availableColors.Remove(color);
+            return color;
+        }
 
         public Game(Dictionary<TcpClient, string> clients, out Dictionary<TcpClient, PlayerContext> players)
         {
             Console.WriteLine("Starting game.");
 
             // Setup players for clients
-            Players = clients.ToDictionary(a => a.Key, a => new PlayerContext(a.Key, GetSpawnPosition(), ClientIdCounter++) { Name = a.Value });
+            Players = clients.ToDictionary(a => a.Key, a => new PlayerContext(this, a.Key, GetSpawnPosition(), ClientIdCounter++, a.Value, GetRandomColor()));
             players = Players;
 
             // Remove from waiting lobby
@@ -66,7 +85,8 @@ namespace Server.GameLogic
                 Network.Instance.SendPacket(player.Key, new Packet("gamestart"));
 
                 // Tell client to spawn itself
-                Network.Instance.SendPacket(player.Key, new Packet("spawn", player.Value.Id + ":" + player.Value.Position.X + ":" + player.Value.Position.Y));
+                Network.Instance.SendPacket(player.Key, new Packet("spawn", player.Value.Id + ":" + player.Value.Position.X + 
+                    ":" + player.Value.Position.Y + ":" + player.Value.Color.R + ":" + player.Value.Color.G + ":" + player.Value.Color.B));
 
                 // Tell all others that we spawned
                 foreach (var otherPlayer in Players)
@@ -74,7 +94,9 @@ namespace Server.GameLogic
                     if (otherPlayer.Key != player.Key)
                     {
                         // Spawn all others for the client
-                        Network.Instance.SendPacket(player.Key, new Packet("spawnother", otherPlayer.Value.Id + ":" + otherPlayer.Value.Position.X + ":" + otherPlayer.Value.Position.Y + ":" + otherPlayer.Value.Name));
+                        Network.Instance.SendPacket(player.Key, new Packet("spawnother", otherPlayer.Value.Id + 
+                            ":" + otherPlayer.Value.Position.X + ":" + otherPlayer.Value.Position.Y + ":" + otherPlayer.Value.Name + 
+                            ":" + otherPlayer.Value.Color.R + ":" + otherPlayer.Value.Color.G + ":" + otherPlayer.Value.Color.B));
                     }
                 }
             }

@@ -117,6 +117,7 @@ namespace Bomberman.Client
                 _commandHandlers["gamecountdown"] = HandleGameCountdown;
                 _commandHandlers["playerdied"] = HandlePlayerDied;
                 _commandHandlers["gameover"] = HandleGameOver;
+                _commandHandlers["invincibility"] = HandleInvincibilityPowerup;
 
                 // Send our player name to the server
                 SendPacket(Client, new Packet("playername", PlayerName));
@@ -130,6 +131,37 @@ namespace Bomberman.Client
             }
 
             return false;
+        }
+
+        private Player GetPlayerByName(string name)
+        {
+            var player = _otherPlayers.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (player == null)
+            {
+                if (_player.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    player = _player;
+
+                if (player == null)
+                {
+                    Console.WriteLine("Invalid player name supplied ("+name+").");
+                }
+            }
+            return player;
+        }
+
+        private Task HandleInvincibilityPowerup(string message)
+        {
+            var data = message.Split(':');
+            var player = GetPlayerByName(data[1]);
+            if (data[0] == "start")
+            {
+                player.StartBlinkingAnimation();
+            }
+            else
+            {
+                player.StopBlinkingAnimation();
+            }
+            return Task.CompletedTask;
         }
 
         private Task HandleGameOver(string arg)
@@ -150,23 +182,13 @@ namespace Bomberman.Client
                 bomb.Parent = null;
             }
             _bombsPlaced.Clear();
+            Game.GridScreen = null;
             return Task.CompletedTask;
         }
 
         private Task HandlePlayerDied(string message)
         {
-            var player = _otherPlayers.FirstOrDefault(a => a.Name.Equals(message, StringComparison.OrdinalIgnoreCase));
-            if (player == null)
-            {
-                if (_player.Name.Equals(message, StringComparison.OrdinalIgnoreCase))
-                    player = _player;
-
-                if (player == null)
-                {
-                    Console.WriteLine("Invalid player name suplied to death event.");
-                    return Task.CompletedTask;
-                }
-            }
+            var player = GetPlayerByName(message);
             player.StartDeadAnimation();
             return Task.CompletedTask;
         }
@@ -253,6 +275,9 @@ namespace Bomberman.Client
             }).ToList();
             if (bomb != null)
             {
+                // Clean up also power ups on these positions
+                foreach (var pos in positions)
+                    Game.GridScreen.Grid.DeletePowerUp(pos);
                 bomb.CleanupFireAfter(positions);
                 _bombsPlaced.Remove(bomb);
             }
@@ -339,7 +364,8 @@ namespace Bomberman.Client
             var coords = message.Split(':');
             var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
             var playerName = coords[3];
-            _otherPlayers.Add(new Player(position, int.Parse(coords[0]), false)
+            var color = new Color(byte.Parse(coords[4]), byte.Parse(coords[5]), byte.Parse(coords[6]));
+            _otherPlayers.Add(new Player(position, int.Parse(coords[0]), color, false)
             {
                 Parent = Game.GridScreen,
                 Name = playerName
@@ -351,7 +377,8 @@ namespace Bomberman.Client
         {
             var coords = message.Split(':');
             var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
-            _player = new Player(position, int.Parse(coords[0]), true)
+            var color = new Color(byte.Parse(coords[3]), byte.Parse(coords[4]), byte.Parse(coords[5]));
+            _player = new Player(position, int.Parse(coords[0]), color, true)
             {
                 Parent = Game.GridScreen,
                 Name = PlayerName

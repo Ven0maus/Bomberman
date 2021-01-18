@@ -210,14 +210,20 @@ namespace Server.GameLogic
             foreach (var pos in cellPositions)
             {
                 // Game over, kill player
-                var deadPlayer = _game.Players.FirstOrDefault(a => a.Value.Position == pos).Value;
-                if (deadPlayer != null && deadPlayer.Alive)
+                var deadPlayers = _game.Players
+                    .Where(a => a.Value.Position == pos && a.Value.Alive && a.Value.SecondsInvincible == 0)
+                    .Select(a => a.Value)
+                    .ToList();
+                if (!_game.GameOver && deadPlayers.Any())
                 {
-                    deadPlayer.Alive = false;
+                    foreach (var deadPlayer in deadPlayers)
+                    {
+                        deadPlayer.Alive = false;
 
-                    // Let players know this player died
-                    foreach (var player in _game.Players)
-                        Network.Instance.SendPacket(player.Key, new Packet("playerdied", deadPlayer.Name)); 
+                        // Let players know this player died
+                        foreach (var player in _game.Players)
+                            Network.Instance.SendPacket(player.Key, new Packet("playerdied", deadPlayer.Name));
+                    }
 
                     // Check if there is 1 or no players left alive, then reset the game
                     if (_game.Players.Count(a => a.Value.Alive) <= 1 && !_game.GameOver)

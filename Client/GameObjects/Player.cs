@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using SadConsole.Entities;
+using System;
 
 namespace Bomberman.Client.GameObjects
 {
@@ -15,10 +16,11 @@ namespace Bomberman.Client.GameObjects
         public int BombsPlaced { get; set; }
         public bool RequestedMovement { get; set; }
         public bool RequestBombPlacement { get; set; }
+        public readonly Color Color;
 
         public bool _controllable;
 
-        public Player(Point position, int id, bool controllable = true) : base(Color.White, Color.Transparent, 18)
+        public Player(Point position, int id, Color color, bool controllable = true) : base(Color.White, Color.Transparent, 18)
         {
             Alive = true;
             Id = id;
@@ -27,8 +29,11 @@ namespace Bomberman.Client.GameObjects
             Font = Game.Font;
             Moved += Player_Moved;
             IsFocused = _controllable;
+            Color = color;
+            Animation[0].Foreground = Color;
         }
 
+        private int _currentGlyph;
         private void Player_Moved(object sender, EntityMovedEventArgs e)
         {
             var previous = e.FromPosition;
@@ -37,50 +42,80 @@ namespace Bomberman.Client.GameObjects
             int diffX = current.X - previous.X;
             int diffY = current.Y - previous.Y;
 
+            int changed = _currentGlyph;
+
             // Right
             if (diffX == 1 && diffY == 0)
             {
-                if (Animation[0].Glyph != 16)
-                {
-                    Animation[0].Glyph = 16;
-                    Animation.IsDirty = true;
-                }
+                _currentGlyph = 16;
             }
             // Left
             else if (diffX == -1 && diffY == 0)
             {
-                if (Animation[0].Glyph != 17)
-                {
-                    Animation[0].Glyph = 17;
-                    Animation.IsDirty = true;
-                }
+                _currentGlyph = 17;
             }
             // Up
             else if (diffX == 0 && diffY == -1)
             {
-                if (Animation[0].Glyph != 19)
-                {
-                    Animation[0].Glyph = 19;
-                    Animation.IsDirty = true;
-                }
+                _currentGlyph = 19;
             }
             // Down
             else if (diffX == 0 && diffY == 1)
             {
-                if (Animation[0].Glyph != 18)
-                {
-                    Animation[0].Glyph = 18;
-                    Animation.IsDirty = true;
-                }
+                _currentGlyph = 18;
+            }
+
+            if (changed != _currentGlyph)
+            {
+                Animation[0].Glyph = _currentGlyph;
+                Animation.IsDirty = true;
             }
         }
 
         public void StartDeadAnimation()
         {
-            // TODO: Prettify
+            new DeathSign(Position, Color)
+            {
+                Parent = Game.GridScreen
+            };
+
             Alive = false;
             IsVisible = false;
             IsFocused = false;
+        }
+
+        private bool _isBlinking = false;
+        public void StartBlinkingAnimation()
+        {
+            _isBlinking = true;
+        }
+
+        public void StopBlinkingAnimation()
+        {
+            _isBlinking = false;
+            Animation[0].Foreground = Color;
+            Animation.IsDirty = true;
+            _timeSinceLastBlink = 0;
+        }
+
+        private const double _blinkInterval = 0.5d * 1000;
+        private double _timeSinceLastBlink = 0d;
+        public override void Update(TimeSpan timeElapsed)
+        {
+            base.Update(timeElapsed);
+            if (_isBlinking)
+            {
+                _timeSinceLastBlink += timeElapsed.Milliseconds;
+                if (_timeSinceLastBlink >= _blinkInterval)
+                {
+                    _timeSinceLastBlink = 0;
+                    if (Animation[0].Foreground == Color)
+                        Animation[0].Foreground = Color.Lerp(Color, Color.Transparent, 0.3f);
+                    else
+                        Animation[0].Foreground = Color;
+                    Animation.IsDirty = true;
+                }
+            }
         }
 
         public override bool ProcessKeyboard(SadConsole.Input.Keyboard info)

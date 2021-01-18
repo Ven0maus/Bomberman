@@ -374,6 +374,7 @@ namespace Server
                         }
 
                         // Let clients know the client has readied/unreadied
+                        Console.WriteLine("Waiting lobby: " + string.Join("\n", WaitingLobby.Select(a => Clients[a.Key] + ": " + a.Value)));
                         foreach (var c in WaitingLobby.Where(a => a.Key != client))
                         {
                             SendPacket(c.Key, new Packet(ready ? "ready" : "unready", Clients[client]));
@@ -401,17 +402,19 @@ namespace Server
                 // Send gameover packet
                 SendPacket(player.Key, new Packet("gameover"));
 
-                // Send client to waiting lobby
-                SendPacket(player.Key, new Packet("joinwaitinglobby", Clients[player.Key]));
-
-                // Notify others that this client is in the waiting lobby
-                foreach (var p in _game.Players.Where(a => a.Key != player.Key))
-                {
-                    SendPacket(player.Key, new Packet("joinwaitinglobby", Clients[p.Key]));
-                }
-
                 // Add back to waiting lobby
                 WaitingLobby.Add(player.Key, false);
+            }
+
+            // Send everyone to the waiting lobby
+            foreach (var player in Clients.Where(a => a.Value != null))
+            {
+                SendPacket(player.Key, new Packet("joinwaitinglobby", Clients[player.Key]));
+
+                foreach (var other in Clients.Where(a => a.Value != null && a.Key != player.Key))
+                {
+                    SendPacket(player.Key, new Packet("joinwaitinglobby", Clients[other.Key]));
+                }
             }
 
             // Clear for new game

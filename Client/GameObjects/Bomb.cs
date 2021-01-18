@@ -1,7 +1,5 @@
-﻿using Bomberman.Client.Graphics;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using SadConsole.Entities;
-using System;
 using System.Collections.Generic;
 
 namespace Bomberman.Client.GameObjects

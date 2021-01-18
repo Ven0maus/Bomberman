@@ -66,19 +66,27 @@ namespace Bomberman.Client.GameObjects
             }
         }
 
+        private readonly Dictionary<Point, PowerUpVisual> _powerups = new Dictionary<Point, PowerUpVisual>();
         public void SpawnPowerUp(Point position, PowerUp powerUp)
-        {
-            var cell = GetValue(position.X, position.Y);
-            cell.Glyph = powerUp == PowerUp.ExtraBomb ? 5 : 6;
-            cell.Foreground = Color.White;
-            Game.GridScreen.IsDirty = true;
-        }
-
-        public void DeletePowerUp(Point position)
         {
             var cell = GetValue(position.X, position.Y);
             cell.Explored = true;
             Game.GridScreen.IsDirty = true;
+
+            var visual = new PowerUpVisual(position, powerUp)
+            {
+                Parent = Game.GridScreen
+            };
+            _powerups.Add(position, visual);
+        }
+
+        public void DeletePowerUp(Point position)
+        {
+            if (_powerups.TryGetValue(position, out PowerUpVisual visual))
+            {
+                visual.Parent = null;
+                _powerups.Remove(position);
+            }
         }
 
         public bool IsWall(int x, int y)
