@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Bomberman.Client.Graphics
 {
-    public class ClientWaitingLobby : ControlsConsole
+    public class ClientWaitingLobby : ControlsConsole, IErrorLogger
     {
         private readonly int _width, _height;
 
@@ -39,9 +39,20 @@ namespace Bomberman.Client.Graphics
         }
 
         private double _timePassed;
+        private double _timePassedMsg;
         public override void Update(System.TimeSpan time)
         {
             base.Update(time);
+
+            if (_errorMessage != null)
+            {
+                _timePassedMsg += time.Milliseconds;
+                if (_timePassedMsg >= 5000)
+                {
+                    _timePassedMsg = 0;
+                    _errorMessage = null;
+                }
+            }
 
             if (_countdownBegon)
             {
@@ -57,6 +68,21 @@ namespace Bomberman.Client.Graphics
                     Invalidate();
                 }
             }
+        }
+
+        private string _errorMessage;
+        public void ShowError(string message)
+        {
+            _errorMessage = message;
+            _timePassedMsg = 0;
+            Invalidate();
+        }
+
+        public void ClearError()
+        {
+            _errorMessage = null;
+            _timePassedMsg = 0;
+            Invalidate();
         }
 
         public void StartCountdown(int startNr)
@@ -112,6 +138,7 @@ namespace Bomberman.Client.Graphics
             Game.Client.Disconnect();
             Game.MainMenuScreen.IsVisible = true;
             Game.MainMenuScreen.IsFocused = true;
+            Game.ClientWaitingLobby = null;
             Global.CurrentScreen = Game.MainMenuScreen;
             _playerSlots = new Dictionary<string, bool>();
             IsVisible = false;
@@ -153,7 +180,13 @@ __________              ___.
 
             if (_countdownBegon)
             {
-                Print((_width / 2) - 10, (_height / 2) - 8, "Next game starts in: " + _countDown);
+                string text = "Next game starts in: " + _countDown;
+                Print((_width / 2) - (text.Length / 2), (_height / 2) - 8, text);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                Print((_width / 2) - (_errorMessage.Length / 2), (_height / 2) - 7, new ColoredString(_errorMessage, Color.Red, Color.Transparent));
             }
         }
 

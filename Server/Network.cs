@@ -299,10 +299,6 @@ namespace Server
                         if (Clients.ContainsKey(client))
                             Clients[client] = playerName;
 
-                        // Send a welcome message
-                        string msg = $"Welcome to the Bomberman Server {playerName}.";
-                        SendPacket(client, new Packet("message", msg));
-
                         WaitingLobby.Add(client, false);
 
                         // Add all clients in waiting lobby to the client's lobby, including himself

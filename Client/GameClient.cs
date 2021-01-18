@@ -95,6 +95,9 @@ namespace Bomberman.Client
                 Console.WriteLine("Connected to the server at {0}.", Client.Client.RemoteEndPoint);
                 Running = true;
 
+                Game.MainMenuScreen.ServerConnectionScreen.IsFocused = false;
+                Game.MainMenuScreen.ServerConnectionScreen.IsVisible = false;
+
                 // Hook up some packet command handlers
                 _commandHandlers["bye"] = HandleBye;
                 _commandHandlers["joinwaitinglobby"] = HandleJoinWaitingLobby;
@@ -182,6 +185,7 @@ namespace Bomberman.Client
                 bomb.Parent = null;
             }
             _bombsPlaced.Clear();
+            Game.ClientWaitingLobby.ClearError();
             Game.GridScreen = null;
             return Task.CompletedTask;
         }
@@ -405,13 +409,15 @@ namespace Bomberman.Client
             // Print the message
             Console.WriteLine("The server is disconnecting us with this message:");
             Console.WriteLine(message);
+            if (SadConsole.Global.CurrentScreen is IErrorLogger logger)
+                logger.ShowError(message);
 
             // Will start the disconnection process in Run()
             Running = false;
             // Go back to main menu
-            Game.MainMenuScreen.IsVisible = true;
-            Game.MainMenuScreen.IsFocused = true;
-            SadConsole.Global.CurrentScreen = Game.MainMenuScreen;
+            Game.MainMenuScreen.ServerConnectionScreen.IsVisible = true;
+            Game.MainMenuScreen.ServerConnectionScreen.IsFocused = true;
+            SadConsole.Global.CurrentScreen = Game.MainMenuScreen.ServerConnectionScreen;
             return Task.CompletedTask; 
         }
 
@@ -419,6 +425,8 @@ namespace Bomberman.Client
         private Task HandleMessage(string message)
         {
             Console.WriteLine(message);
+            if (SadConsole.Global.CurrentScreen is IErrorLogger logger)
+                logger.ShowError(message);
             return Task.CompletedTask;
         }
 

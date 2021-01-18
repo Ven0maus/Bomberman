@@ -7,7 +7,7 @@ using System;
 
 namespace Bomberman.Client.Graphics
 {
-    public class ServerConnectionScreen : ControlsConsole
+    public class ServerConnectionScreen : ControlsConsole, IErrorLogger
     {
         private readonly int _width, _height;
         private readonly TextBox _serverIpBox, _serverPortBox, _playerName;
@@ -91,6 +91,9 @@ __________              ___.
             base.OnInvalidate();
             PrintTitle();
             WriteInputBoxNames();
+
+            if (!string.IsNullOrWhiteSpace(_errorMessage))
+                Print(_width / 2 - (_errorMessage.Length / 2), _playerName.Position.Y - 2, new ColoredString(_errorMessage, Color.Red, Color.Transparent));
         }
 
         private void WriteInputBoxNames()
@@ -135,9 +138,22 @@ __________              ___.
         }
 
         private double _timePassed = 0f;
+        private double _timePassedMsg = 0f;
+        private string _errorMessage;
         public override void Update(TimeSpan time)
         {
             base.Update(time);
+
+            if (_errorMessage != null)
+            {
+                _timePassedMsg += time.Milliseconds;
+                if (_timePassedMsg >= 5000)
+                {
+                    _timePassedMsg = 0;
+                    _errorMessage = null;
+                }
+            }
+
             if (Connecting)
             {
                 _timePassed += time.Milliseconds;
@@ -154,33 +170,44 @@ __________              ___.
             }
         }
 
+        public void ShowError(string message)
+        {
+            _errorMessage = message;
+            _timePassedMsg = 0;
+            Invalidate();
+        }
+
+        public void ClearError()
+        {
+            _errorMessage = null;
+            _timePassedMsg = 0;
+            Invalidate();
+        }
+
         private void ConnectButton_Click(object sender, EventArgs e)
         {
             if (!int.TryParse(_serverPortBox.Text, out int port))
             {
-                // TODO: Show invalid port error message
+                ShowError("Invalid port, should be numbers only.");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(_playerName.Text))
             {
-                // TODO: Show invalid name error message
+                ShowError("Player name cannot be empty.");
                 return;
             }
 
             Game.Client = new GameClient(_serverIpBox.Text, port, _playerName.Text);
             if (Game.Client.Connect())
             {
-                IsFocused = false;
-                IsVisible = false;
-
                 // Server will send player to the client waiting lobby
                 // A timer is automatically started, incase server packet isn't received by client
                 Connecting = true;
             }
             else
             {
-                // TODO: Show message that connection was not possible
+                ShowError("No response from the server.");
             }
         }
     }
