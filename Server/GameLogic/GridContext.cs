@@ -3,7 +3,6 @@ using Bomberman.Client.Graphics;
 using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
 
 namespace Server.GameLogic

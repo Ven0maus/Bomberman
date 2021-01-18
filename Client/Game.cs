@@ -1,6 +1,5 @@
 ﻿using Bomberman.Client.Graphics;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using SadConsole;
 using System;
 
