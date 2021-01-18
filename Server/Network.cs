@@ -22,7 +22,7 @@ namespace Server
         private readonly string _serverIp;
         private readonly int _serverPort;
         private readonly TcpListener _listener;
-        private readonly Dictionary<TcpClient, string> _clients;
+        public readonly Dictionary<TcpClient, string> Clients;
         private Dictionary<TcpClient, PlayerContext> _players;
         public readonly Dictionary<TcpClient, bool> WaitingLobby;
         private readonly int _maxPlayers;
@@ -71,7 +71,7 @@ namespace Server
 
         public string GetClientPlayerName(TcpClient client)
         {
-            if (_clients.TryGetValue(client, out string playerName))
+            if (Clients.TryGetValue(client, out string playerName))
                 return playerName;
             return null;
         }
@@ -106,7 +106,7 @@ namespace Server
             _serverPort = serverPort;
             _maxPlayers = maxPlayers;
             _running = false;
-            _clients = new Dictionary<TcpClient, string>();
+            Clients = new Dictionary<TcpClient, string>();
             _timeSinceLastHeartbeat = new Dictionary<TcpClient, HeartbeatCheck>();
             _listener = new TcpListener(IPAddress.Parse(serverIp), serverPort);
             WaitingLobby = new Dictionary<TcpClient, bool>();
@@ -153,7 +153,7 @@ namespace Server
                 .Where(a => a.Value)
                 .Select(a => a.Key)
                 .ToList();
-            var clients = _clients
+            var clients = Clients
                 .Where(a => readyClients.Contains(a.Key))
                 .ToDictionary(a => a.Key, a => a.Value);
             _game = new GameLogic.Game(clients, out _players);
@@ -170,7 +170,7 @@ namespace Server
 
             foreach (var client in _timeSinceLastHeartbeat)
             {
-                if (!_clients.ContainsKey(client.Key)) continue;
+                if (!Clients.ContainsKey(client.Key)) continue;
                 var heartbeatCheck = _timeSinceLastHeartbeat[client.Key];
                 if (heartbeatCheck.Time.AddMilliseconds(HeartbeatInterval * 1000) <= DateTime.Now)
                 {
@@ -224,7 +224,7 @@ namespace Server
                 }
 
                 // Check game logic steps
-                foreach (var client in _clients.ToList())
+                foreach (var client in Clients.ToList())
                 {
                     try
                     {
@@ -248,7 +248,7 @@ namespace Server
             Task.WaitAll(tasks.ToArray(), 1000);
 
             // Disconnect any clients still here
-            Parallel.ForEach(_clients, (client) =>
+            Parallel.ForEach(Clients, (client) =>
             {
                 DisconnectClient(client.Key, "The server is being shutdown.");
             });
@@ -290,14 +290,14 @@ namespace Server
                         string playerName = packet.Message;
 
                         // Sanity check if name already exists
-                        if (_clients.Any(a => a.Value != null && a.Value.Equals(playerName, StringComparison.OrdinalIgnoreCase)))
+                        if (Clients.Any(a => a.Value != null && a.Value.Equals(playerName, StringComparison.OrdinalIgnoreCase)))
                         {
                             DisconnectClient(client, $"Name: [{playerName}] is already taken.");
                             return;
                         }
 
-                        if (_clients.ContainsKey(client))
-                            _clients[client] = playerName;
+                        if (Clients.ContainsKey(client))
+                            Clients[client] = playerName;
 
                         // Send a welcome message
                         string msg = $"Welcome to the Bomberman Server {playerName}.";
@@ -307,7 +307,7 @@ namespace Server
 
                         // Add all clients in waiting lobby to the client's lobby, including himself
                         foreach (var c in WaitingLobby)
-                            SendPacket(client, new Packet("joinwaitinglobby", _clients[c.Key]));
+                            SendPacket(client, new Packet("joinwaitinglobby", Clients[c.Key]));
 
                         // Tell other clients that we joined the waiting lobby
                         foreach (var c in WaitingLobby.Where(a => a.Key != client))
@@ -376,7 +376,7 @@ namespace Server
                         // Let clients know the client has readied/unreadied
                         foreach (var c in WaitingLobby.Where(a => a.Key != client))
                         {
-                            SendPacket(c.Key, new Packet(ready ? "ready" : "unready", _clients[client]));
+                            SendPacket(c.Key, new Packet(ready ? "ready" : "unready", Clients[client]));
                         }
                         break;
                     default:
@@ -402,12 +402,12 @@ namespace Server
                 SendPacket(player.Key, new Packet("gameover"));
 
                 // Send client to waiting lobby
-                SendPacket(player.Key, new Packet("joinwaitinglobby", _clients[player.Key]));
+                SendPacket(player.Key, new Packet("joinwaitinglobby", Clients[player.Key]));
 
                 // Notify others that this client is in the waiting lobby
                 foreach (var p in _game.Players.Where(a => a.Key != player.Key))
                 {
-                    SendPacket(player.Key, new Packet("joinwaitinglobby", _clients[p.Key]));
+                    SendPacket(player.Key, new Packet("joinwaitinglobby", Clients[p.Key]));
                 }
 
                 // Add back to waiting lobby
@@ -426,14 +426,14 @@ namespace Server
             Console.WriteLine("New connection from {0}.", newClient.Client.RemoteEndPoint);
 
             // Disconnect client because server is full.
-            if (_clients.Count == _maxPlayers)
+            if (Clients.Count == _maxPlayers)
             {
                 DisconnectClient(newClient, "Server is full.");
                 return;
             }
 
             // Store them and put them in the game
-            _clients.Add(newClient, null);
+            Clients.Add(newClient, null);
 
             // Add client
             _timeSinceLastHeartbeat.Add(newClient, new HeartbeatCheck(newClient));
@@ -462,9 +462,32 @@ namespace Server
         public void HandleDisconnectedClient(TcpClient client)
         {
             // We already handled this client, this call came from lingering packets
-            if (!_clients.ContainsKey(client)) return;
+            if (!Clients.ContainsKey(client)) return;
 
             Console.WriteLine("Client disconnected.");
+
+            // Tell everyone that this client left during the game
+            if (GameOngoing && _game.Players.TryGetValue(client, out PlayerContext player))
+            {
+                player.Alive = false;
+
+                // Let players know that this player left
+                foreach (var c in _game.Players.Where(a => a.Key != client))
+                {
+                    SendPacket(c.Key, new Packet("playerdied", player.Name));
+                }
+
+                // Check if there is 1 or no players left alive, then reset the game
+                if (_game.Players.Count(a => a.Value.Alive) <= 1)
+                {
+                    _game.Players.Remove(client);
+                    ResetGame();
+                }
+                else
+                {
+                    _game.Players.Remove(client);
+                }
+            }
 
             // First notify other waiting lobby clients if this one is still in waiting lobby
             if (WaitingLobby.ContainsKey(client))
@@ -496,13 +519,13 @@ namespace Server
                 foreach (var c in WaitingLobby)
                 {
                     if (c.Key != client)
-                        SendPacket(c.Key, new Packet("removefromwaitinglobby", _clients[client]));
+                        SendPacket(c.Key, new Packet("removefromwaitinglobby", Clients[client]));
                 }
             }
 
             // Remove from collections and free resources
             _timeSinceLastHeartbeat.Remove(client);
-            _clients.Remove(client);
+            Clients.Remove(client);
             _players?.Remove(client);
             WaitingLobby.Remove(client);
             PacketHandler.RemoveClientPacketProtocol(client);

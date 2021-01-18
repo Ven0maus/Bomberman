@@ -31,6 +31,8 @@ namespace Server.GameLogic
             new Point(Bomberman.Client.Game.GridWidth -1, Bomberman.Client.Game.GridHeight -1),
         };
 
+        public bool GameOver = false;
+
         public Game(Dictionary<TcpClient, string> clients, out Dictionary<TcpClient, PlayerContext> players)
         {
             Console.WriteLine("Starting game.");
@@ -45,8 +47,8 @@ namespace Server.GameLogic
                 Network.Instance.WaitingLobby.Remove(player.Key);
             }
 
-            // Tell who is left to remove the players that went in game
-            foreach (var player in Network.Instance.WaitingLobby)
+            // Tell everyone to remove the players that went in game
+            foreach (var player in Network.Instance.Clients)
             {
                 foreach (var p in Players)
                 {
@@ -78,30 +80,6 @@ namespace Server.GameLogic
             }
         }
 
-        public void AddPlayer(TcpClient client)
-        {
-            if (Players.Count < 8)
-            {
-                var player = new PlayerContext(client, GetSpawnPosition(), ClientIdCounter++);
-                Players.Add(client, player);
-
-                // Spawn ourself
-                Network.Instance.SendPacket(client, new Packet("spawn", player.Id + ":" + player.Position.X + ":" + player.Position.Y));
-
-                // Let all others know we spawned
-                foreach (var otherPlayer in Players)
-                {
-                    if (otherPlayer.Key != client)
-                    {
-                        // Let the client spawn all others aswel
-                        Network.Instance.SendPacket(client, new Packet("spawnother", otherPlayer.Value.Id + ":" + otherPlayer.Value.Position.X + ":" + otherPlayer.Value.Position.Y));
-                        // Let all others spawn the client
-                        Network.Instance.SendPacket(otherPlayer.Key, new Packet("spawnother", player.Id + ":" + player.Position.X + ":" + player.Position.Y));
-                    }
-                }
-            }
-        }
-
         private PlayerContext GetPlayer(TcpClient client)
         {
             if (Players.TryGetValue(client, out PlayerContext player))
@@ -112,6 +90,8 @@ namespace Server.GameLogic
 
         public void Move(TcpClient client, Point position)
         {
+            if (GameOver) return;
+
             var player = GetPlayer(client);
             if (player == null)
                 throw new Exception("Player is null!");
@@ -162,6 +142,8 @@ namespace Server.GameLogic
 
         public void PlaceBomb(TcpClient client)
         {
+            if (GameOver) return;
+
             var player = GetPlayer(client);
             if (player == null) return;
 

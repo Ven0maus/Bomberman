@@ -3,6 +3,7 @@ using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 
 namespace Server.GameLogic
@@ -219,10 +220,14 @@ namespace Server.GameLogic
                         Network.Instance.SendPacket(player.Key, new Packet("playerdied", deadPlayer.Name)); 
 
                     // Check if there is 1 or no players left alive, then reset the game
-                    if (_game.Players.Count(a => a.Value.Alive) <= 1)
+                    if (_game.Players.Count(a => a.Value.Alive) <= 1 && !_game.GameOver)
                     {
-                        Network.Instance.ResetGame();
-                        return null;
+                        _game.GameOver = true;
+                        Task.Run(async () =>
+                        {
+                            await Task.Delay(3000);
+                            Network.Instance.ResetGame();
+                        });
                     }
                 }
 
