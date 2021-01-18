@@ -17,7 +17,8 @@ namespace Server.GameLogic
 
         private float _bombTime;
         private readonly float _strength;
-        private bool _done, _detonated;
+        private bool _done;
+        public bool Detonated { get; private set; }
 
         private readonly Game _game;
 
@@ -48,7 +49,7 @@ namespace Server.GameLogic
                 return;
             }
 
-            if (!_detonated)
+            if (!Detonated)
                 Detonate();
             else
                 CleanupFireAfter();
@@ -192,7 +193,7 @@ namespace Server.GameLogic
         public DetonationData Detonate(bool sendPackets = true)
         {
             // Time for cleanup
-            _detonated = true;
+            Detonated = true;
             _bombTime = 1250;
             _bombTimer.Interval = _bombTime;
             _bombTimer.Stop();
@@ -261,6 +262,9 @@ namespace Server.GameLogic
             {
                 CellPositions = data.CellPositions;
                 _bombIds = data.BombIds;
+
+                foreach (var c in CellPositions)
+                    _grid.GetValue(c.X, c.Y).Glyph = 4;
 
                 // Send detonation packet to the client
                 string formattedCellPositions = string.Join(":", data.CellPositions.Select(a => a.X + "," + a.Y));

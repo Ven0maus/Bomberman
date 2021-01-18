@@ -1,6 +1,8 @@
 ﻿using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
+using System.Linq;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace Server.GameLogic
 {
@@ -52,13 +54,32 @@ namespace Server.GameLogic
             SecondsInvincible -= 1;
             if (SecondsInvincible <= 0)
             {
+                _invincibilityTimer.Stop();
+
                 // Let everyone know this client is no longer invincible
                 foreach (var player in _game.Players)
                 {
                     Network.Instance.SendPacket(player.Key, new Packet("invincibility", "stop:" + Name));
                 }
 
-                _invincibilityTimer.Stop();
+                // Check if we're currently standing in fire
+                if (_game.Context.IsOnFire(Position))
+                {
+                    // Let players know this player died
+                    foreach (var player in _game.Players)
+                        Network.Instance.SendPacket(player.Key, new Packet("playerdied", Name));
+
+                    // Check if there is 1 or no players left alive, then reset the game
+                    if (_game.Players.Count(a => a.Value.Alive) <= 1 && !_game.GameOver)
+                    {
+                        _game.GameOver = true;
+                        Task.Run(async () =>
+                        {
+                            await Task.Delay(3000);
+                            Network.Instance.ResetGame();
+                        });
+                    }
+                }
             }
         }
     }

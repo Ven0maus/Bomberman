@@ -3,6 +3,7 @@ using Bomberman.Client.Graphics;
 using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 
 namespace Server.GameLogic
@@ -29,6 +30,11 @@ namespace Server.GameLogic
             placedBy.BombsPlaced += 1;
             Bombs.Add(position, bomb);
             return true;
+        }
+
+        public bool IsOnFire(Point position)
+        {
+            return _game.Context.GetValue(position.X, position.Y).HasFire;
         }
 
         public void CheckPowerup(PlayerContext player, TcpClient client)

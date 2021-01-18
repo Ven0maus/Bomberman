@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace Server.GameLogic
 {
@@ -156,6 +157,27 @@ namespace Server.GameLogic
                 {
                     Network.Instance.SendPacket(p.Key, new Packet("moveother", $"{player.Id}:{player.Position.X}:{player.Position.Y}"));
                 }
+            }
+
+            // Check if we moved onto a tile that is on fire
+            if (Context.IsOnFire(position))
+            {
+                // Let players know this player died
+                foreach (var p in Players)
+                    Network.Instance.SendPacket(p.Key, new Packet("playerdied", player.Name));
+
+                // Check if there is 1 or no players left alive, then reset the game
+                if (Players.Count(a => a.Value.Alive) <= 1 && !GameOver)
+                {
+                    GameOver = true;
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(3000);
+                        Network.Instance.ResetGame();
+                    });
+                }
+
+                return;
             }
 
             // Also check if we picked up a power up during player move
