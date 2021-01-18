@@ -39,6 +39,9 @@ namespace Bomberman.Client
 
         private static void Init()
         {
+            //Settings.AllowWindowResize = false;
+            Settings.ResizeMode = Settings.WindowResizeOptions.Fit;
+
             var fontMaster = new FontMaster(Texture2D.FromFile(SadConsole.Game.Instance.GraphicsDevice, "Graphics/Textures/Tileset.png"), 16, 16);
             Font = fontMaster.GetFont(Font.FontSizes.Three);
 

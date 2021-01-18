@@ -79,7 +79,13 @@ namespace Server.GameLogic
                         var tile = GetValue(x, y);
                         if (!tile.Explored && tile.Destroyable)
                         {
-                            tile.PowerUp = (PowerUp)Game.Random.Next(1, 4);
+                            var randomValue = Game.Random.Next(1, 8);
+                            if (randomValue <= 3)
+                                tile.PowerUp = PowerUp.BombStrength;
+                            else if (randomValue <= 6)
+                                tile.PowerUp = PowerUp.ExtraBomb;
+                            else
+                                tile.PowerUp = PowerUp.Invicibility;
                         }
                     }
                 }
