@@ -374,7 +374,6 @@ namespace Server
                         }
 
                         // Let clients know the client has readied/unreadied
-                        Console.WriteLine("Waiting lobby: " + string.Join("\n", WaitingLobby.Select(a => Clients[a.Key] + ": " + a.Value)));
                         foreach (var c in WaitingLobby.Where(a => a.Key != client))
                         {
                             SendPacket(c.Key, new Packet(ready ? "ready" : "unready", Clients[client]));

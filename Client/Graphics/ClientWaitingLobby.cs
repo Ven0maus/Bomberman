@@ -180,10 +180,8 @@ __________              ___.
 
         public void SetReady(string playerName, bool ready)
         {
-            System.Console.WriteLine("Before: " + string.Join(",", _playerSlots.Select(a => a.Key + ": " + a.Value)));
             if (_playerSlots.ContainsKey(playerName))
                 _playerSlots[playerName] = ready;
-            System.Console.WriteLine("After: " + string.Join(",", _playerSlots.Select(a => a.Key + ": " + a.Value)));
             Invalidate();
         }
 
