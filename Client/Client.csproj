@@ -12,6 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Graphics\Textures\Tileset.font">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Graphics\Textures\Tileset.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
