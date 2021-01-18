@@ -21,7 +21,7 @@ namespace Bomberman.Client.GameObjects
                 case PowerUp.BombStrength:
                     Animation[0].Glyph = 6;
                     break;
-                case PowerUp.Invicibility:
+                case PowerUp.Invincibility:
                     Animation[0].Glyph = 7;
                     break;
             }

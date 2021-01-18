@@ -46,7 +46,7 @@ namespace Server.GameLogic
                 case PowerUp.BombStrength:
                     player.BombStrength++;
                     break;
-                case PowerUp.Invicibility:
+                case PowerUp.Invincibility:
                     player.StartInvincibility();
                     break;
                 default:
@@ -85,7 +85,7 @@ namespace Server.GameLogic
                             else if (randomValue <= 6)
                                 tile.PowerUp = PowerUp.ExtraBomb;
                             else
-                                tile.PowerUp = PowerUp.Invicibility;
+                                tile.PowerUp = PowerUp.Invincibility;
                         }
                     }
                 }

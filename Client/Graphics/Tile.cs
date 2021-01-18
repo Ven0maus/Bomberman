@@ -9,7 +9,7 @@ namespace Bomberman.Client.Graphics
         None,
         ExtraBomb,
         BombStrength,
-        Invicibility
+        Invincibility
     }
 
     public class Tile : Cell
