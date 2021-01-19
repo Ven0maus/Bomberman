@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Bomberman.Client.ServerSide
@@ -15,7 +14,7 @@ namespace Bomberman.Client.ServerSide
             try
             {
                 // convert JSON to buffer and its length to a 16 bit unsigned integer buffer
-                byte[] jsonBuffer = packet != null ? PacketProtocol.WrapMessage(Encoding.UTF8.GetBytes(packet.ToJson())) : PacketProtocol.WrapKeepaliveMessage();
+                byte[] jsonBuffer = packet != null ? PacketProtocol.WrapMessage(packet.Serialize()) : PacketProtocol.WrapKeepaliveMessage();
                 Console.WriteLine("Packet size: " + jsonBuffer.Length);
                 // Send the packet
                 await client.GetStream().WriteAsync(jsonBuffer, 0, jsonBuffer.Length);
@@ -23,7 +22,7 @@ namespace Bomberman.Client.ServerSide
             catch (Exception e)
             {
                 Console.WriteLine($"There was an issue sending a packet to the {(server ? "Server" : "Client")}.");
-                Console.WriteLine("Reason: {0}", e.Message);
+                Console.WriteLine("Reason: {0}\n{1}", e.Message, e.StackTrace);
                 throw;
             }
         }
@@ -49,9 +48,11 @@ namespace Bomberman.Client.ServerSide
                         }
 
                         // Convert data into a packet datatype
-                        string jsonString = Encoding.UTF8.GetString(data);
-                        var packet = Packet.FromJson(jsonString);
-                        action(client, packet);
+                        var packet = Packet.Deserialize(data);
+                        if (packet != null)
+                            action(client, packet);
+                        else
+                            Console.WriteLine("Could not deserialize a received byte stream.");
                     };
                     Console.WriteLine($"Created packet protocol: [{(server ? "Server" : "Client")}]");
                     _packetProtocols.Add(client, packetProtocol);
@@ -73,7 +74,7 @@ namespace Bomberman.Client.ServerSide
             {
                 // There was an issue in receiving
                 Console.WriteLine("There was an issue receiving a packet from the {0} [{1}].", server ? "Server" : "Client", client.Client.RemoteEndPoint);
-                Console.WriteLine("Reason: {0}", e.Message);
+                Console.WriteLine("Reason: {0}\n{1}", e.Message, e.StackTrace);
                 throw;
             }
         }

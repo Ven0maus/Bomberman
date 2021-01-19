@@ -9,7 +9,7 @@ namespace Bomberman.Client.ServerSide
     /// <remarks>
     /// <para>Create one instance of this class for each incoming stream, and assign a handler to <see cref="MessageArrived"/>. As bytes arrive at the stream, pass them to <see cref="DataReceived"/>, which will invoke <see cref="MessageArrived"/> as necessary.</para>
     /// <para>If <see cref="DataReceived"/> raises <see cref="System.Net.ProtocolViolationException"/>, then the stream data should be considered invalid. After that point, no methods should be called on that <see cref="PacketProtocol"/> instance.</para>
-    /// <para>This class uses a 4-byte signed integer length prefix, which allows for message sizes up to 2 GB. Keepalive messages are supported as messages with a length prefix of 0 and no message data.</para>
+    /// <para>This class uses a 2-byte unsigned short length prefix. Keepalive messages are supported as messages with a length prefix of 0 and no message data.</para>
     /// <para>This is EXAMPLE CODE! It is not particularly efficient; in particular, if this class is rewritten so that a particular interface is used (e.g., Socket's IAsyncResult methods), some buffer copies become unnecessary and may be removed.</para>
     /// </remarks>
     public class PacketProtocol
@@ -23,8 +23,12 @@ namespace Bomberman.Client.ServerSide
         /// <param name="message">The message to send.</param>
         public static byte[] WrapMessage(byte[] message)
         {
+            // Sanity check
+            if (message.Length > ushort.MaxValue)
+                throw new Exception("Message byte array length exceeds: " + ushort.MaxValue);
+
             // Get the length prefix for the message
-            byte[] lengthPrefix = BitConverter.GetBytes(message.Length);
+            byte[] lengthPrefix = BitConverter.GetBytes((ushort)message.Length);
 
             // Concatenate the length prefix and the message
             byte[] ret = new byte[lengthPrefix.Length + message.Length];
@@ -39,22 +43,22 @@ namespace Bomberman.Client.ServerSide
         /// </summary>
         public static byte[] WrapKeepaliveMessage()
         {
-            return BitConverter.GetBytes((int)0);
+            return BitConverter.GetBytes((ushort)0);
         }
 
         /// <summary>
         /// Initializes a new <see cref="PacketProtocol"/>, limiting message sizes to the given maximum size.
         /// </summary>
         /// <param name="maxMessageSize">The maximum message size supported by this protocol. This may be less than or equal to zero to indicate no maximum message size.</param>
-        public PacketProtocol(int maxMessageSize)
+        public PacketProtocol(ushort maxMessageSize)
         {
             // We allocate the buffer for receiving message lengths immediately
-            _lengthBuffer = new byte[sizeof(int)];
+            _lengthBuffer = new byte[sizeof(ushort)];
             _maxMessageSize = maxMessageSize;
         }
 
         /// <summary>
-        /// The buffer for the length prefix; this is always 4 bytes long.
+        /// The buffer for the length prefix; this is always 2 bytes long.
         /// </summary>
         private readonly byte[] _lengthBuffer;
 
@@ -71,7 +75,7 @@ namespace Bomberman.Client.ServerSide
         /// <summary>
         /// The maximum size of messages allowed.
         /// </summary>
-        private readonly int _maxMessageSize;
+        private readonly ushort _maxMessageSize;
 
         /// <summary>
         /// Indicates the completion of a message read from the stream.
@@ -148,20 +152,16 @@ namespace Bomberman.Client.ServerSide
             {
                 // We're currently receiving the length buffer
 
-                if (_bytesReceived != sizeof(int))
+                if (_bytesReceived != sizeof(ushort))
                 {
                     // We haven't gotten all the length buffer yet: just wait for more data to arrive
                 }
                 else
                 {
                     // We've gotten the length buffer
-                    int length = BitConverter.ToInt32(_lengthBuffer, 0);
+                    ushort length = BitConverter.ToUInt16(_lengthBuffer, 0);
 
-                    // Sanity check for length < 0
-                    if (length < 0)
-                        throw new System.Net.ProtocolViolationException("Message length is less than zero");
-
-                    // Another sanity check is needed here for very large packets, to prevent denial-of-service attacks
+                    // Sanity check is needed here for very large packets, to prevent denial-of-service attacks
                     if (_maxMessageSize > 0 && length > _maxMessageSize)
                         throw new System.Net.ProtocolViolationException("Message length " + length.ToString(System.Globalization.CultureInfo.InvariantCulture) + " is larger than maximum message size " + _maxMessageSize.ToString(System.Globalization.CultureInfo.InvariantCulture));
 

@@ -112,8 +112,10 @@ namespace Server
             WaitingLobby = new Dictionary<TcpClient, bool>();
 
             // Countdown timer for game start once 2 or more players are ready
-            _gameStartTimer = new System.Timers.Timer(1000);
-            _gameStartTimer.AutoReset = true;
+            _gameStartTimer = new System.Timers.Timer(1000)
+            {
+                AutoReset = true
+            };
             _gameStartTimer.Elapsed += GameStartTimer_Elapsed;
 
             _heartbeatTimer = new System.Timers.Timer(1000);
@@ -265,16 +267,22 @@ namespace Server
             _timeSinceLastHeartbeat[client].Reset();
             if (packet == null) return;
 
+            if (!Packet.ReadableOpCodes.TryGetValue(packet.OpCode, out string readableOpCode))
+            {
+                Console.WriteLine("Unhandled packet: " + packet.ToString());
+                return;
+            }
+
             try
             {
-                switch (packet.Command)
+                switch (readableOpCode)
                 {
                     case "heartbeat":
                         // Automatically handled
                         return;
                     case "move":
                         if (_game == null) return;
-                        var coords = packet.Message.Split(':');
+                        var coords = packet.Arguments.Split(':');
                         var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
                         _game.Move(client, position);
                         break;
@@ -287,7 +295,7 @@ namespace Server
                         HandleDisconnectedClient(client);
                         break;
                     case "playername":
-                        string playerName = packet.Message;
+                        string playerName = packet.Arguments;
 
                         // Sanity check if name already exists
                         if (Clients.Any(a => a.Value != null && a.Value.Equals(playerName, StringComparison.OrdinalIgnoreCase)))
@@ -318,7 +326,7 @@ namespace Server
                             return;
                         }
 
-                        var ready = packet.Message.Equals("1");
+                        var ready = packet.Arguments.Equals("1");
                         WaitingLobby[client] = ready;
 
                         // If a game is already ongoing, we don't need to overwrite the current with new players

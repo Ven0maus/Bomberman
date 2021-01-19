@@ -445,8 +445,10 @@ namespace Bomberman.Client
             try
             {
                 if (packet == null) return;
-                if (_commandHandlers.ContainsKey(packet.Command))
-                    _commandHandlers[packet.Command](packet.Message).GetAwaiter().GetResult();
+                if (!Packet.ReadableOpCodes.TryGetValue(packet.OpCode, out string readableOpCode))
+                    return;
+                if (_commandHandlers.ContainsKey(readableOpCode))
+                    _commandHandlers[readableOpCode](packet.Arguments).GetAwaiter().GetResult();
             }
             catch(SocketException)
             {
