@@ -141,12 +141,12 @@ namespace Bomberman.Client
             var player = _otherPlayers.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (player == null)
             {
-                if (_player.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                if (_player != null && _player.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                     player = _player;
 
                 if (player == null)
                 {
-                    Console.WriteLine("Invalid player name supplied ("+name+").");
+                    Console.WriteLine("Invalid player name supplied ("+name+"), or the game ended.");
                 }
             }
             return player;
@@ -156,6 +156,7 @@ namespace Bomberman.Client
         {
             var data = message.Split(':');
             var player = GetPlayerByName(data[1]);
+            if (player == null) return;
             if (data[0] == "start")
             {
                 player.StartBlinkingAnimation();
@@ -193,6 +194,7 @@ namespace Bomberman.Client
         private Task HandlePlayerDied(string message)
         {
             var player = GetPlayerByName(message);
+            if (player == null) return;
             player.StartDeadAnimation();
             return Task.CompletedTask;
         }
