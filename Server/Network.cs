@@ -112,8 +112,10 @@ namespace Server
             WaitingLobby = new Dictionary<TcpClient, bool>();
 
             // Countdown timer for game start once 2 or more players are ready
-            _gameStartTimer = new System.Timers.Timer(1000);
-            _gameStartTimer.AutoReset = true;
+            _gameStartTimer = new System.Timers.Timer(1000)
+            {
+                AutoReset = true
+            };
             _gameStartTimer.Elapsed += GameStartTimer_Elapsed;
 
             _heartbeatTimer = new System.Timers.Timer(1000);
@@ -265,29 +267,51 @@ namespace Server
             _timeSinceLastHeartbeat[client].Reset();
             if (packet == null) return;
 
+            if (!Packet.ReadableOpCodes.TryGetValue(packet.OpCode, out string readableOpCode))
+            {
+                Console.WriteLine("Unhandled packet: " + packet.ToString());
+                return;
+            }
+
             try
             {
-                switch (packet.Command)
+                switch (readableOpCode)
                 {
                     case "heartbeat":
                         // Automatically handled
                         return;
-                    case "move":
+                    case "moveleft":
                         if (_game == null) return;
-                        var coords = packet.Message.Split(':');
-                        var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
-                        _game.Move(client, position);
+                        _game.Move(client, new Point(-1, 0), readableOpCode);
+                        break;
+                    case "moveright":
+                        if (_game == null) return;
+                        _game.Move(client, new Point(1, 0), readableOpCode);
+                        break;
+                    case "moveup":
+                        if (_game == null) return;
+                        _game.Move(client, new Point(0, -1), readableOpCode);
+                        break;
+                    case "movedown":
+                        if (_game == null) return;
+                        _game.Move(client, new Point(0, 1), readableOpCode);
                         break;
                     case "placebomb":
                         if (_game == null) return;
                         _game.PlaceBomb(client);
-                        Console.WriteLine("Client attempted to place a bomb.");
                         break;
                     case "bye":
                         HandleDisconnectedClient(client);
                         break;
                     case "playername":
-                        string playerName = packet.Message;
+                        string playerName = packet.Arguments;
+
+                        // Sanity check for name hacks
+                        if (string.IsNullOrWhiteSpace(playerName) || playerName.Length > 20)
+                        {
+                            DisconnectClient(client, $"Name: [{playerName}] is not valid.");
+                            return;
+                        }
 
                         // Sanity check if name already exists
                         if (Clients.Any(a => a.Value != null && a.Value.Equals(playerName, StringComparison.OrdinalIgnoreCase)))
@@ -318,7 +342,7 @@ namespace Server
                             return;
                         }
 
-                        var ready = packet.Message.Equals("1");
+                        var ready = packet.Arguments.Equals("1");
                         WaitingLobby[client] = ready;
 
                         // If a game is already ongoing, we don't need to overwrite the current with new players
@@ -472,7 +496,7 @@ namespace Server
                 // Let players know that this player left
                 foreach (var c in _game.Players.Where(a => a.Key != client))
                 {
-                    SendPacket(c.Key, new Packet("playerdied", player.Name));
+                    SendPacket(c.Key, new Packet("playerdied", player.Id.ToString()));
                 }
 
                 // Check if there is 1 or no players left alive, then reset the game

@@ -133,7 +133,7 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestedMovement = true;
                     var targetPosition = Position + new Point(0, -1);
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}"));
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("moveup"));
                 }
                 return true;
             }
@@ -143,7 +143,7 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestedMovement = true;
                     var targetPosition = Position + new Point(0, 1);
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}"));
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("movedown"));
                 }
                 return true;
             }
@@ -153,7 +153,7 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestedMovement = true;
                     var targetPosition = Position + new Point(-1, 0);
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}"));
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("moveleft"));
                 }
                 return true;
             }
@@ -163,7 +163,7 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestedMovement = true;
                     var targetPosition = Position + new Point(1, 0);
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("move", $"{targetPosition.X}:{targetPosition.Y}"));
+                    Game.Client.SendPacket(Game.Client.Client, new Packet("moveright"));
                 }
                 return true;
             }

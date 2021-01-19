@@ -38,7 +38,7 @@ namespace Server.GameLogic
             Color.Cyan,
             Color.Orange,
             Color.Yellow,
-            Color.Green,
+            Color.LightGreen,
             Color.Brown,
             Color.Magenta,
             Color.White
@@ -111,7 +111,7 @@ namespace Server.GameLogic
             return null;
         }
 
-        public void Move(TcpClient client, Point position)
+        public void Move(TcpClient client, Point position, string readableOpCode)
         {
             if (GameOver) return;
 
@@ -121,52 +121,36 @@ namespace Server.GameLogic
 
             if (!player.Alive) return;
 
-            var previous = player.Position;
-            var diffX = previous.X - position.X;
-            var diffY = previous.Y - position.Y;
+            var targetPosition = player.Position + position;
 
-            if (diffX > 1 || diffX < -1 || diffY > 1 || diffY < -1)
+            if (!Context.CanMove(targetPosition.X, targetPosition.Y))
             {
-                Console.WriteLine("Player attempted a wrong movement action, packet ignored.");
-                Network.Instance.SendPacket(client, new Packet("move", $"bad entry"));
-                return;
-            }
-
-            if (diffX == 0 && diffY == 0)
-            {
-                Console.WriteLine("Player attempted to move to the same position, packet ignored.");
-                Network.Instance.SendPacket(client, new Packet("move", $"bad entry"));
-                return;
-            }
-
-            if (!Context.CanMove(position.X, position.Y))
-            {
-                Network.Instance.SendPacket(client, new Packet("move", $"bad entry"));
+                Network.Instance.SendPacket(client, new Packet(readableOpCode, $"bad entry"));
                 return;
             }
 
             // Update server-side player position
-            player.Position = position;
+            player.Position = targetPosition;
 
-            Network.Instance.SendPacket(client, new Packet("move", $"{player.Position.X}:{player.Position.Y}"));
+            Network.Instance.SendPacket(client, new Packet(readableOpCode));
 
             // Let all other clients know we moved
             foreach (var p in Players)
             {
                 if (p.Key != client)
                 {
-                    Network.Instance.SendPacket(p.Key, new Packet("moveother", $"{player.Id}:{player.Position.X}:{player.Position.Y}"));
+                    Network.Instance.SendPacket(p.Key, new Packet(readableOpCode, $"{player.Id}"));
                 }
             }
 
             // Check if we moved onto a tile that is on fire
-            if (Context.IsOnFire(position) && Players[client].Alive && Players[client].SecondsInvincible <= 0)
+            if (Context.IsOnFire(player.Position) && Players[client].Alive && Players[client].SecondsInvincible <= 0)
             {
                 Players[client].Alive = false;
 
                 // Let players know this player died
                 foreach (var p in Players)
-                    Network.Instance.SendPacket(p.Key, new Packet("playerdied", player.Name));
+                    Network.Instance.SendPacket(p.Key, new Packet("playerdied", player.Id.ToString()));
 
                 // Check if there is 1 or no players left alive, then reset the game
                 if (Players.Count(a => a.Value.Alive) <= 1 && !GameOver)

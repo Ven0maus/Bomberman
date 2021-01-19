@@ -104,8 +104,10 @@ namespace Bomberman.Client
                 _commandHandlers["removefromwaitinglobby"] = HandleRemoveFromWaitingLobby;
                 _commandHandlers["message"] = HandleMessage;
                 _commandHandlers["heartbeat"] = HandleHeartbeat;
-                _commandHandlers["move"] = HandleMovement;
-                _commandHandlers["moveother"] = HandleMovementOther;
+                _commandHandlers["moveleft"] = HandleMovementLeft;
+                _commandHandlers["moveright"] = HandleMovementRight;
+                _commandHandlers["moveup"] = HandleMovementUp;
+                _commandHandlers["movedown"] = HandleMovementDown;
                 _commandHandlers["spawn"] = HandlePlayerInstantiation;
                 _commandHandlers["spawnother"] = HandleOtherInstantiation;
                 _commandHandlers["placebomb"] = HandleBombPlacement;
@@ -136,17 +138,137 @@ namespace Bomberman.Client
             return false;
         }
 
-        private Player GetPlayerByName(string name)
+        private Task HandleMovementDown(string message)
         {
-            var player = _otherPlayers.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (message == "bad entry")
+            {
+                _player.RequestedMovement = false;
+                return Task.CompletedTask;
+            }
+
+            Player player;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (!int.TryParse(message, out int id))
+                {
+                    Console.WriteLine("Could not parse: " + message);
+                    return Task.CompletedTask;
+                }
+
+                player = GetPlayerById(id);
+                if (player == null) return Task.CompletedTask;
+            }
+            else
+            {
+                player = _player;
+            }
+
+            player.RequestedMovement = false;
+            player.Position += new Point(0, 1);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleMovementUp(string message)
+        {
+            if (message == "bad entry")
+            {
+                _player.RequestedMovement = false;
+                return Task.CompletedTask;
+            }
+
+            Player player;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (!int.TryParse(message, out int id))
+                {
+                    Console.WriteLine("Could not parse: " + message);
+                    return Task.CompletedTask;
+                }
+
+                player = GetPlayerById(id);
+                if (player == null) return Task.CompletedTask;
+            }
+            else
+            {
+                player = _player;
+            }
+
+            player.RequestedMovement = false;
+            player.Position += new Point(0, -1);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleMovementRight(string message)
+        {
+            if (message == "bad entry")
+            {
+                _player.RequestedMovement = false;
+                return Task.CompletedTask;
+            }
+
+            Player player;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (!int.TryParse(message, out int id))
+                {
+                    Console.WriteLine("Could not parse: " + message);
+                    return Task.CompletedTask;
+                }
+
+                player = GetPlayerById(id);
+                if (player == null) return Task.CompletedTask;
+            }
+            else
+            {
+                player = _player;
+            }
+
+            player.RequestedMovement = false;
+            player.Position += new Point(1, 0);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleMovementLeft(string message)
+        {
+            if (message == "bad entry")
+            {
+                _player.RequestedMovement = false;
+                return Task.CompletedTask;
+            }
+
+            Player player;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (!int.TryParse(message, out int id))
+                {
+                    Console.WriteLine("Could not parse: " + message);
+                    return Task.CompletedTask;
+                }
+
+                player = GetPlayerById(id);
+                if (player == null) return Task.CompletedTask;
+            }
+            else
+            {
+                player = _player;
+            }
+
+            player.RequestedMovement = false;
+            player.Position += new Point(-1, 0);
+            return Task.CompletedTask;
+        }
+
+        private Player GetPlayerById(int id)
+        {
+            var player = _otherPlayers.FirstOrDefault(a => a.Id == id);
             if (player == null)
             {
-                if (_player != null && _player.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                if (_player != null && _player.Id == id)
                     player = _player;
 
                 if (player == null)
                 {
-                    Console.WriteLine("Invalid player name supplied ("+name+"), or the game ended.");
+                    Console.WriteLine("Invalid player id supplied (" + id + "), or the game ended.");
                 }
             }
             return player;
@@ -155,7 +277,7 @@ namespace Bomberman.Client
         private Task HandleInvincibilityPowerup(string message)
         {
             var data = message.Split(':');
-            var player = GetPlayerByName(data[1]);
+            var player = GetPlayerById(int.Parse(data[1]));
             if (player == null) return Task.CompletedTask;
             if (data[0] == "start")
             {
@@ -193,7 +315,7 @@ namespace Bomberman.Client
 
         private Task HandlePlayerDied(string message)
         {
-            var player = GetPlayerByName(message);
+            var player = GetPlayerById(int.Parse(message));
             if (player == null) return Task.CompletedTask;
             player.StartDeadAnimation();
             return Task.CompletedTask;
@@ -267,33 +389,26 @@ namespace Bomberman.Client
 
         private Task HandleDetonationPhase2(string message)
         {
-            var data = message.Split(':').ToList();
-            int bombId = int.Parse(data[0]);
-            var bomb = _bombsPlaced.FirstOrDefault(a => a.Id == bombId);
-            data.RemoveAt(0);
-            if (data.Count == 1 && string.IsNullOrEmpty(data[0])) return Task.CompletedTask;
-            var positions = data.Select(a =>
+            var data = message.Split(',');
+
+            foreach (var entry in data)
             {
-                var coords = a.Split(',');
-                if (!int.TryParse(coords[0], out int x) || !int.TryParse(coords[1], out int y))
-                    throw new Exception("Invalid coordinates phase2: [" + a + "] | Message: " + message);
-                return new Point(x, y);
-            }).ToList();
-            if (bomb != null)
-            {
-                // Clean up also power ups on these positions
-                foreach (var pos in positions)
-                    Game.GridScreen.Grid.DeletePowerUp(pos);
-                bomb.CleanupFireAfter(positions);
-                _bombsPlaced.Remove(bomb);
+                int bombId = int.Parse(entry);
+                var bomb = _bombsPlaced.FirstOrDefault(a => a.Id == bombId);
+
+                if (bomb != null)
+                {
+                    bomb.CleanupFireAfter();
+                    _bombsPlaced.Remove(bomb);
+                }
             }
+
             return Task.CompletedTask;
         }
 
         private Task HandleDetonationPhase1(string message)
         {
-            var data = message.Split(':').ToList();
-            var bombIds = data[0].Split(',');
+            var bombIds = message.Split(',');
             var ids = bombIds.Select(int.Parse);
             
             foreach (var bombId in ids)
@@ -304,18 +419,6 @@ namespace Bomberman.Client
                     bomb.Detonate();
                 }
             }
-
-            data.RemoveAt(0);
-            if (data.Count == 1 && string.IsNullOrEmpty(data[0])) return Task.CompletedTask;
-            var positions = data.Select(a =>
-            {
-                var coords = a.Split(',');
-                if (!int.TryParse(coords[0], out int x) || !int.TryParse(coords[1], out int y))
-                    throw new Exception("Invalid coordinates phase1: [" + a + "] | Message: " + message);
-                return new Point(x, y);
-            }).ToList();
-
-            Game.GridScreen.Grid.BombDetonationPhase1(positions);
 
             return Task.CompletedTask;
         }
@@ -354,17 +457,6 @@ namespace Bomberman.Client
             return Task.CompletedTask;
         }
 
-        private Task HandleMovementOther(string message)
-        {
-            var coords = message.Split(':');
-            var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
-            var id = int.Parse(coords[0]);
-            var p = _otherPlayers.FirstOrDefault(a => a.Id == id);
-            if (p != null)
-                p.Position = position;
-            return Task.CompletedTask;
-        }
-
         private Task HandleOtherInstantiation(string message)
         {
             var coords = message.Split(':');
@@ -389,20 +481,6 @@ namespace Bomberman.Client
                 Parent = Game.GridScreen,
                 Name = PlayerName
             };
-            return Task.CompletedTask;
-        }
-
-        private Task HandleMovement(string message)
-        {
-            _player.RequestedMovement = false;
-            if (message == "bad entry")
-            {
-                return Task.CompletedTask;
-            }
-
-            var coords = message.Split(':');
-            var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
-            _player.Position = position;
             return Task.CompletedTask;
         }
 
@@ -445,8 +523,10 @@ namespace Bomberman.Client
             try
             {
                 if (packet == null) return;
-                if (_commandHandlers.ContainsKey(packet.Command))
-                    _commandHandlers[packet.Command](packet.Message).GetAwaiter().GetResult();
+                if (!Packet.ReadableOpCodes.TryGetValue(packet.OpCode, out string readableOpCode))
+                    return;
+                if (_commandHandlers.ContainsKey(readableOpCode))
+                    _commandHandlers[readableOpCode](packet.Arguments).GetAwaiter().GetResult();
             }
             catch(SocketException)
             {

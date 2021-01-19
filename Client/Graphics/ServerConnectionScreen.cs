@@ -34,7 +34,8 @@ namespace Bomberman.Client.Graphics
                 Name = "Player-name:",
                 UseKeyboard = true,
                 AllowDecimal = true,
-                Text = "Test"
+                Text = "Test",
+                MaxLength = 20,
             };
             Add(_playerName);
 
@@ -44,7 +45,8 @@ namespace Bomberman.Client.Graphics
                 Name = "Server-ip:",
                 UseKeyboard = true,
                 AllowDecimal = true,
-                Text = "127.0.0.1"
+                Text = "127.0.0.1",
+                MaxLength = 80,
             };
             Add(_serverIpBox);
 
@@ -54,7 +56,8 @@ namespace Bomberman.Client.Graphics
                 Name = "Server-port:",
                 UseKeyboard = true,
                 AllowDecimal = true,
-                Text = "25565"
+                Text = "25565",
+                MaxLength = 80,
             };
             Add(_serverPortBox);
 
@@ -194,7 +197,13 @@ __________              ___.
 
             if (string.IsNullOrWhiteSpace(_playerName.Text))
             {
-                ShowError("Player name cannot be empty.");
+                ShowError("Player name cannot be empty or whitespace.");
+                return;
+            }
+
+            if (_playerName.Text.Length > 20)
+            {
+                ShowError($"Player name must be within 20 characters in length [was: {_playerName.Text.Length}].");
                 return;
             }
 
