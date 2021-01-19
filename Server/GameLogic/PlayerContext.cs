@@ -45,7 +45,7 @@ namespace Server.GameLogic
             // Let everyone know this client is invincible
             foreach (var player in _game.Players)
             {
-                Network.Instance.SendPacket(player.Key, new Packet("invincibility", "start:" + Name));
+                Network.Instance.SendPacket(player.Key, new Packet("invincibility", "start:" + Id));
             }
         }
 
@@ -59,7 +59,7 @@ namespace Server.GameLogic
                 // Let everyone know this client is no longer invincible
                 foreach (var player in _game.Players)
                 {
-                    Network.Instance.SendPacket(player.Key, new Packet("invincibility", "stop:" + Name));
+                    Network.Instance.SendPacket(player.Key, new Packet("invincibility", "stop:" + Id));
                 }
 
                 // Check if we're currently standing in fire
@@ -67,7 +67,7 @@ namespace Server.GameLogic
                 {
                     // Let players know this player died
                     foreach (var player in _game.Players)
-                        Network.Instance.SendPacket(player.Key, new Packet("playerdied", Name));
+                        Network.Instance.SendPacket(player.Key, new Packet("playerdied", Id.ToString()));
 
                     // Check if there is 1 or no players left alive, then reset the game
                     if (_game.Players.Count(a => a.Value.Alive) <= 1 && !_game.GameOver)

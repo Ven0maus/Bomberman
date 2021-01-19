@@ -289,13 +289,19 @@ namespace Server
                     case "placebomb":
                         if (_game == null) return;
                         _game.PlaceBomb(client);
-                        Console.WriteLine("Client attempted to place a bomb.");
                         break;
                     case "bye":
                         HandleDisconnectedClient(client);
                         break;
                     case "playername":
                         string playerName = packet.Arguments;
+
+                        // Sanity check for name hacks
+                        if (string.IsNullOrWhiteSpace(playerName) || playerName.Length > 20)
+                        {
+                            DisconnectClient(client, $"Name: [{playerName}] is not valid.");
+                            return;
+                        }
 
                         // Sanity check if name already exists
                         if (Clients.Any(a => a.Value != null && a.Value.Equals(playerName, StringComparison.OrdinalIgnoreCase)))
@@ -480,7 +486,7 @@ namespace Server
                 // Let players know that this player left
                 foreach (var c in _game.Players.Where(a => a.Key != client))
                 {
-                    SendPacket(c.Key, new Packet("playerdied", player.Name));
+                    SendPacket(c.Key, new Packet("playerdied", player.Id.ToString()));
                 }
 
                 // Check if there is 1 or no players left alive, then reset the game

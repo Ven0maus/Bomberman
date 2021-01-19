@@ -136,17 +136,17 @@ namespace Bomberman.Client
             return false;
         }
 
-        private Player GetPlayerByName(string name)
+        private Player GetPlayerById(int id)
         {
-            var player = _otherPlayers.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            var player = _otherPlayers.FirstOrDefault(a => a.Id == id);
             if (player == null)
             {
-                if (_player != null && _player.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                if (_player != null && _player.Id == id)
                     player = _player;
 
                 if (player == null)
                 {
-                    Console.WriteLine("Invalid player name supplied ("+name+"), or the game ended.");
+                    Console.WriteLine("Invalid player id supplied (" + id + "), or the game ended.");
                 }
             }
             return player;
@@ -155,7 +155,7 @@ namespace Bomberman.Client
         private Task HandleInvincibilityPowerup(string message)
         {
             var data = message.Split(':');
-            var player = GetPlayerByName(data[1]);
+            var player = GetPlayerById(int.Parse(data[1]));
             if (player == null) return Task.CompletedTask;
             if (data[0] == "start")
             {
@@ -193,7 +193,7 @@ namespace Bomberman.Client
 
         private Task HandlePlayerDied(string message)
         {
-            var player = GetPlayerByName(message);
+            var player = GetPlayerById(int.Parse(message));
             if (player == null) return Task.CompletedTask;
             player.StartDeadAnimation();
             return Task.CompletedTask;

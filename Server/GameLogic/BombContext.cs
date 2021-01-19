@@ -223,7 +223,7 @@ namespace Server.GameLogic
 
                         // Let players know this player died
                         foreach (var player in _game.Players)
-                            Network.Instance.SendPacket(player.Key, new Packet("playerdied", deadPlayer.Name));
+                            Network.Instance.SendPacket(player.Key, new Packet("playerdied", deadPlayer.Id.ToString()));
                     }
 
                     // Check if there is 1 or no players left alive, then reset the game

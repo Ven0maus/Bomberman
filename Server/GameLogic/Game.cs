@@ -166,7 +166,7 @@ namespace Server.GameLogic
 
                 // Let players know this player died
                 foreach (var p in Players)
-                    Network.Instance.SendPacket(p.Key, new Packet("playerdied", player.Name));
+                    Network.Instance.SendPacket(p.Key, new Packet("playerdied", player.Id.ToString()));
 
                 // Check if there is 1 or no players left alive, then reset the game
                 if (Players.Count(a => a.Value.Alive) <= 1 && !GameOver)
