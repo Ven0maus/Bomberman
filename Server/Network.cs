@@ -108,7 +108,7 @@ namespace Server
             _running = false;
             Clients = new Dictionary<TcpClient, string>();
             _timeSinceLastHeartbeat = new Dictionary<TcpClient, HeartbeatCheck>();
-            _listener = new TcpListener(IPAddress.Parse(serverIp), serverPort);
+            _listener = new TcpListener(IPAddress.Any, serverPort);
             WaitingLobby = new Dictionary<TcpClient, bool>();
 
             // Countdown timer for game start once 2 or more players are ready
