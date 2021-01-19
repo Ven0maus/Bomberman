@@ -34,7 +34,12 @@ namespace Bomberman.Client
 
         public GameClient(string serverIp, int serverPort, string playerName)
         {
-            Client = new TcpClient();
+            Client = new TcpClient
+            {
+                NoDelay = true,
+            };
+            Client.Client.NoDelay = true;
+            Client.ReceiveBufferSize = 250;
             PlayerName = playerName;
             _serverIp = serverIp;
             _serverPort = serverPort;
@@ -548,27 +553,21 @@ namespace Bomberman.Client
             }
         }
 
-        private double _timeSinceLastReceive = 0;
         private readonly List<Task> _tasks = new List<Task>();
         // Main loop for the Games Client
         public void Update(GameTime gameTime)
         {
-            _timeSinceLastReceive += gameTime.ElapsedGameTime.Milliseconds;
             bool wasRunning = Running;
 
             // Listen for messages
             if (Running)
             {
                 // Check for new packets
-                if (_timeSinceLastReceive > 20)
-                {
-                    _timeSinceLastReceive = 0;
-                    _tasks.RemoveAll(a => a.IsCompleted);
-                    _tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher, false));
-                }
+                _tasks.RemoveAll(a => a.IsCompleted);
+                _tasks.Add(PacketHandler.ReceivePackets(Client, Dispatcher, false));
 
                 _timeSinceLastHeartbeat += gameTime.ElapsedGameTime.Milliseconds;
-                if (_timeSinceLastHeartbeat > 5 * 1000)
+                if (_timeSinceLastHeartbeat > 5000)
                 {
                     _timeSinceLastHeartbeat = 0;
                     // Make sure that we didn't have a graceless disconnect

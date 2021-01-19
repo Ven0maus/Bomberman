@@ -80,6 +80,7 @@ namespace Server
         {
             try
             {
+                if (!client.Connected) return;
                 await PacketHandler.SendPacket(client, packet, true);
             }
             catch (ObjectDisposedException)
@@ -241,9 +242,6 @@ namespace Server
                         HandleDisconnectedClient(client.Key);
                     }
                 }
-
-                // Take a small nap
-                Thread.Sleep(10);
             }
 
             // Allow tasks to finish
@@ -445,6 +443,10 @@ namespace Server
         {
             // See if a new connection attempted to join
             TcpClient newClient = await _listener.AcceptTcpClientAsync();
+            newClient.NoDelay = true;
+            newClient.Client.NoDelay = true;
+            newClient.ReceiveBufferSize = 250;
+
             Console.WriteLine("New connection from {0}.", newClient.Client.RemoteEndPoint);
 
             // Disconnect client because server is full.
