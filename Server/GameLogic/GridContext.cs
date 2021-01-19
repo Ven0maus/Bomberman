@@ -23,7 +23,7 @@ namespace Server.GameLogic
         public bool PlaceBomb(PlayerContext placedBy, Point position, int strength, out BombContext bomb)
         {
             bomb = null;
-            if (Bombs.ContainsKey(position) || GetValue(position.X, position.Y).HasBomb) return false;
+            if (Bombs.ContainsKey(position) || GetValue(position.X, position.Y).HasBomb || IsOnFire(position)) return false;
             if (placedBy.BombsPlaced >= placedBy.MaxBombs) return false;
             bomb = new BombContext(_game, this, placedBy, position, 3f, strength, _bombCounter++);
             placedBy.BombsPlaced += 1;
