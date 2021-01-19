@@ -280,11 +280,21 @@ namespace Server
                     case "heartbeat":
                         // Automatically handled
                         return;
-                    case "move":
+                    case "moveleft":
                         if (_game == null) return;
-                        var coords = packet.Arguments.Split(':');
-                        var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
-                        _game.Move(client, position);
+                        _game.Move(client, new Point(-1, 0), readableOpCode);
+                        break;
+                    case "moveright":
+                        if (_game == null) return;
+                        _game.Move(client, new Point(1, 0), readableOpCode);
+                        break;
+                    case "moveup":
+                        if (_game == null) return;
+                        _game.Move(client, new Point(0, -1), readableOpCode);
+                        break;
+                    case "movedown":
+                        if (_game == null) return;
+                        _game.Move(client, new Point(0, 1), readableOpCode);
                         break;
                     case "placebomb":
                         if (_game == null) return;

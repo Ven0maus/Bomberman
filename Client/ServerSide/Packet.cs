@@ -69,8 +69,10 @@ namespace Bomberman.Client.ServerSide
             "placebomb",
             "spawnother",
             "spawn",
-            "moveother",
-            "move",
+            "moveleft",
+            "moveright",
+            "moveup",
+            "movedown"
         };
 
         private static byte _lastOpCodeNr;

@@ -104,8 +104,10 @@ namespace Bomberman.Client
                 _commandHandlers["removefromwaitinglobby"] = HandleRemoveFromWaitingLobby;
                 _commandHandlers["message"] = HandleMessage;
                 _commandHandlers["heartbeat"] = HandleHeartbeat;
-                _commandHandlers["move"] = HandleMovement;
-                _commandHandlers["moveother"] = HandleMovementOther;
+                _commandHandlers["moveleft"] = HandleMovementLeft;
+                _commandHandlers["moveright"] = HandleMovementRight;
+                _commandHandlers["moveup"] = HandleMovementUp;
+                _commandHandlers["movedown"] = HandleMovementDown;
                 _commandHandlers["spawn"] = HandlePlayerInstantiation;
                 _commandHandlers["spawnother"] = HandleOtherInstantiation;
                 _commandHandlers["placebomb"] = HandleBombPlacement;
@@ -134,6 +136,126 @@ namespace Bomberman.Client
             }
 
             return false;
+        }
+
+        private Task HandleMovementDown(string message)
+        {
+            if (message == "bad entry")
+            {
+                _player.RequestedMovement = false;
+                return Task.CompletedTask;
+            }
+
+            Player player;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (!int.TryParse(message, out int id))
+                {
+                    Console.WriteLine("Could not parse: " + message);
+                    return Task.CompletedTask;
+                }
+
+                player = GetPlayerById(id);
+                if (player == null) return Task.CompletedTask;
+            }
+            else
+            {
+                player = _player;
+            }
+
+            player.RequestedMovement = false;
+            player.Position += new Point(0, 1);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleMovementUp(string message)
+        {
+            if (message == "bad entry")
+            {
+                _player.RequestedMovement = false;
+                return Task.CompletedTask;
+            }
+
+            Player player;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (!int.TryParse(message, out int id))
+                {
+                    Console.WriteLine("Could not parse: " + message);
+                    return Task.CompletedTask;
+                }
+
+                player = GetPlayerById(id);
+                if (player == null) return Task.CompletedTask;
+            }
+            else
+            {
+                player = _player;
+            }
+
+            player.RequestedMovement = false;
+            player.Position += new Point(0, -1);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleMovementRight(string message)
+        {
+            if (message == "bad entry")
+            {
+                _player.RequestedMovement = false;
+                return Task.CompletedTask;
+            }
+
+            Player player;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (!int.TryParse(message, out int id))
+                {
+                    Console.WriteLine("Could not parse: " + message);
+                    return Task.CompletedTask;
+                }
+
+                player = GetPlayerById(id);
+                if (player == null) return Task.CompletedTask;
+            }
+            else
+            {
+                player = _player;
+            }
+
+            player.RequestedMovement = false;
+            player.Position += new Point(1, 0);
+            return Task.CompletedTask;
+        }
+
+        private Task HandleMovementLeft(string message)
+        {
+            if (message == "bad entry")
+            {
+                _player.RequestedMovement = false;
+                return Task.CompletedTask;
+            }
+
+            Player player;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                if (!int.TryParse(message, out int id))
+                {
+                    Console.WriteLine("Could not parse: " + message);
+                    return Task.CompletedTask;
+                }
+
+                player = GetPlayerById(id);
+                if (player == null) return Task.CompletedTask;
+            }
+            else
+            {
+                player = _player;
+            }
+
+            player.RequestedMovement = false;
+            player.Position += new Point(-1, 0);
+            return Task.CompletedTask;
         }
 
         private Player GetPlayerById(int id)
@@ -354,17 +476,6 @@ namespace Bomberman.Client
             return Task.CompletedTask;
         }
 
-        private Task HandleMovementOther(string message)
-        {
-            var coords = message.Split(':');
-            var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
-            var id = int.Parse(coords[0]);
-            var p = _otherPlayers.FirstOrDefault(a => a.Id == id);
-            if (p != null)
-                p.Position = position;
-            return Task.CompletedTask;
-        }
-
         private Task HandleOtherInstantiation(string message)
         {
             var coords = message.Split(':');
@@ -389,20 +500,6 @@ namespace Bomberman.Client
                 Parent = Game.GridScreen,
                 Name = PlayerName
             };
-            return Task.CompletedTask;
-        }
-
-        private Task HandleMovement(string message)
-        {
-            _player.RequestedMovement = false;
-            if (message == "bad entry")
-            {
-                return Task.CompletedTask;
-            }
-
-            var coords = message.Split(':');
-            var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
-            _player.Position = position;
             return Task.CompletedTask;
         }
 
