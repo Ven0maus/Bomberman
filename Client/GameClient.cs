@@ -156,7 +156,7 @@ namespace Bomberman.Client
         {
             var data = message.Split(':');
             var player = GetPlayerByName(data[1]);
-            if (player == null) return;
+            if (player == null) return Task.CompletedTask;
             if (data[0] == "start")
             {
                 player.StartBlinkingAnimation();
@@ -194,7 +194,7 @@ namespace Bomberman.Client
         private Task HandlePlayerDied(string message)
         {
             var player = GetPlayerByName(message);
-            if (player == null) return;
+            if (player == null) return Task.CompletedTask;
             player.StartDeadAnimation();
             return Task.CompletedTask;
         }
