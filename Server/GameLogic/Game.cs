@@ -160,8 +160,10 @@ namespace Server.GameLogic
             }
 
             // Check if we moved onto a tile that is on fire
-            if (Context.IsOnFire(position) && Players[client].SecondsInvincible <= 0)
+            if (Context.IsOnFire(position) && Players[client].Alive && Players[client].SecondsInvincible <= 0)
             {
+                Players[client].Alive = false;
+
                 // Let players know this player died
                 foreach (var p in Players)
                     Network.Instance.SendPacket(p.Key, new Packet("playerdied", player.Name));
