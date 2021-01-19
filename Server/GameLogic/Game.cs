@@ -38,7 +38,7 @@ namespace Server.GameLogic
             Color.Cyan,
             Color.Orange,
             Color.Yellow,
-            Color.Green,
+            Color.LightGreen,
             Color.Brown,
             Color.Magenta,
             Color.White
