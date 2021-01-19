@@ -118,7 +118,6 @@ namespace Server.GameLogic
             foreach (var pos in cellPositions)
             {
                 var cell = _grid.GetValue(pos.X, pos.Y);
-                _grid.Explore(cell.Position.X, cell.Position.Y);
 
                 foreach (var id in _bombIds)
                 {
@@ -131,6 +130,8 @@ namespace Server.GameLogic
                     continue; // Let other bomb handle this one
                 }
 
+                _grid.Explore(cell.Position.X, cell.Position.Y);
+
                 // Spawn powerup
                 if (cell.PowerUp != PowerUp.None)
                 {
@@ -139,15 +140,14 @@ namespace Server.GameLogic
             }
 
             // Send detonation packet to the client
-            string formattedCellPositions = string.Join(":", cellPositions.Except(exceptPositions).Select(a => a.X + "," + a.Y));
-            Network.Instance.SendPacket(_placedBy.Client, new Packet("detonatePhase2", Id.ToString() + ":" + formattedCellPositions));
+            Network.Instance.SendPacket(_placedBy.Client, new Packet("detonatePhase2", string.Join(",", _bombIds)));
 
             // Let all other clients know this bomb detonated
             foreach (var client in _game.Players)
             {
                 if (client.Key != _placedBy.Client)
                 {
-                    Network.Instance.SendPacket(client.Key, new Packet("detonatePhase2", Id.ToString() + ":" + formattedCellPositions));
+                    Network.Instance.SendPacket(client.Key, new Packet("detonatePhase2", string.Join(",", _bombIds)));
                 }
             }
 
@@ -267,15 +267,14 @@ namespace Server.GameLogic
                     _grid.GetValue(c.X, c.Y).Glyph = 4;
 
                 // Send detonation packet to the client
-                string formattedCellPositions = string.Join(":", data.CellPositions.Select(a => a.X + "," + a.Y));
-                Network.Instance.SendPacket(_placedBy.Client, new Packet("detonatePhase1", string.Join(",", data.BombIds) + ":" + formattedCellPositions));
+                Network.Instance.SendPacket(_placedBy.Client, new Packet("detonatePhase1", string.Join(",", data.BombIds)));
 
                 // Let all other clients know this bomb detonated
                 foreach (var client in _game.Players)
                 {
                     if (client.Key != _placedBy.Client)
                     {
-                        Network.Instance.SendPacket(client.Key, new Packet("detonatePhase1", string.Join(",", data.BombIds) + ":" + formattedCellPositions));
+                        Network.Instance.SendPacket(client.Key, new Packet("detonatePhase1", string.Join(",", data.BombIds)));
                     }
                 }
                 _bombTimer.Start(); // Start again for cleanup

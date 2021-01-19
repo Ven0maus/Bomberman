@@ -53,19 +53,6 @@ namespace Bomberman.Client.GameObjects
             UncoverSpawnLocations();
         }
 
-        public void BombDetonationPhase1(List<Point> points)
-        {
-            // Remove from bombs collection
-            foreach (var pos in points)
-            {
-                var cell = GetValue(pos.X, pos.Y);
-
-                // Set cell on fire
-                cell.Glyph = 4;
-                cell.Foreground = Color.White;
-            }
-        }
-
         private readonly Dictionary<Point, PowerUpVisual> _powerups = new Dictionary<Point, PowerUpVisual>();
         public void SpawnPowerUp(Point position, PowerUp powerUp)
         {

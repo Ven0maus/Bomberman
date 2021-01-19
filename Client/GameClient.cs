@@ -389,33 +389,26 @@ namespace Bomberman.Client
 
         private Task HandleDetonationPhase2(string message)
         {
-            var data = message.Split(':').ToList();
-            int bombId = int.Parse(data[0]);
-            var bomb = _bombsPlaced.FirstOrDefault(a => a.Id == bombId);
-            data.RemoveAt(0);
-            if (data.Count == 1 && string.IsNullOrEmpty(data[0])) return Task.CompletedTask;
-            var positions = data.Select(a =>
+            var data = message.Split(',');
+
+            foreach (var entry in data)
             {
-                var coords = a.Split(',');
-                if (!int.TryParse(coords[0], out int x) || !int.TryParse(coords[1], out int y))
-                    throw new Exception("Invalid coordinates phase2: [" + a + "] | Message: " + message);
-                return new Point(x, y);
-            }).ToList();
-            if (bomb != null)
-            {
-                // Clean up also power ups on these positions
-                foreach (var pos in positions)
-                    Game.GridScreen.Grid.DeletePowerUp(pos);
-                bomb.CleanupFireAfter(positions);
-                _bombsPlaced.Remove(bomb);
+                int bombId = int.Parse(entry);
+                var bomb = _bombsPlaced.FirstOrDefault(a => a.Id == bombId);
+
+                if (bomb != null)
+                {
+                    bomb.CleanupFireAfter();
+                    _bombsPlaced.Remove(bomb);
+                }
             }
+
             return Task.CompletedTask;
         }
 
         private Task HandleDetonationPhase1(string message)
         {
-            var data = message.Split(':').ToList();
-            var bombIds = data[0].Split(',');
+            var bombIds = message.Split(',');
             var ids = bombIds.Select(int.Parse);
             
             foreach (var bombId in ids)
@@ -426,18 +419,6 @@ namespace Bomberman.Client
                     bomb.Detonate();
                 }
             }
-
-            data.RemoveAt(0);
-            if (data.Count == 1 && string.IsNullOrEmpty(data[0])) return Task.CompletedTask;
-            var positions = data.Select(a =>
-            {
-                var coords = a.Split(',');
-                if (!int.TryParse(coords[0], out int x) || !int.TryParse(coords[1], out int y))
-                    throw new Exception("Invalid coordinates phase1: [" + a + "] | Message: " + message);
-                return new Point(x, y);
-            }).ToList();
-
-            Game.GridScreen.Grid.BombDetonationPhase1(positions);
 
             return Task.CompletedTask;
         }
