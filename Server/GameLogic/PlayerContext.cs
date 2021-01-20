@@ -67,6 +67,9 @@ namespace Server.GameLogic
                 // Check if we're currently standing in fire
                 if (_game.Context.IsOnFire(Position))
                 {
+                    // Die
+                    Alive = false;
+
                     // Let players know this player died
                     foreach (var player in _game.Players)
                         Network.Instance.SendPacket(player.Key, new Packet("playerdied", Id.ToString()));
