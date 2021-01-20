@@ -76,12 +76,16 @@ namespace Bomberman.Client.GameObjects
 
         public void StartDeadAnimation()
         {
+            Alive = false;
+
             new DeathSign(Position, Color)
             {
                 Parent = Game.GridScreen
             };
 
-            Alive = false;
+            // Also show it in the player overview
+            Game.GridScreen.PlayerKilled(this);
+
             IsVisible = false;
             IsFocused = false;
         }

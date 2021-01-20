@@ -64,6 +64,13 @@ namespace Bomberman.Client.Graphics
             }
         }
 
+        public void PlayerKilled(Player player)
+        {
+            var index = _characterIndex[player.Id];
+            _charactersConsole.SetBackground(_characterIndex.Count <= 4 ? 1 : 5, index, Color.Red);
+            _charactersConsole.IsDirty = true;
+        }
+
         private int _currentCharacterIndex = 1;
         private void AddCharacter(Player player)
         {
