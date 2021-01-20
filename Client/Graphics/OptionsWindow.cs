@@ -158,9 +158,18 @@ namespace Bomberman.Client.Graphics
             _buttonPressed = (Button)sender;
         }
 
+        public override bool ProcessKeyboard(SadConsole.Input.Keyboard info)
+        {
+            if (WaitingForAnyKeyPress && info.KeysPressed.Any())
+            {
+                ChangeKeybinding(info.KeysPressed.First().Key);
+                return true;
+            }
+            return base.ProcessKeyboard(info);
+        }
+
         public void ChangeKeybinding(Keys newKey)
         {
-            if (!WaitingForAnyKeyPress) return;
             if (_buttonPressed == null) throw new Exception("Oops?");
 
             KeybindingsManager.EditKeybinding((Keybindings)Enum.Parse(typeof(Keybindings), _buttonPressed.Name), newKey);
