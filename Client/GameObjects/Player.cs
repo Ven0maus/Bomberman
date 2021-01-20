@@ -120,6 +120,8 @@ namespace Bomberman.Client.GameObjects
             }
         }
 
+        private bool _walkedFirstTime = false;
+
         public override bool ProcessKeyboard(SadConsole.Input.Keyboard info)
         {
             if (!_controllable) return base.ProcessKeyboard(info);
@@ -136,7 +138,6 @@ namespace Bomberman.Client.GameObjects
                     RequestedMovement = true;
                     Game.Client.SendPacket(Game.Client.Client, new Packet("moveup"));
                 }
-                return true;
             }
             else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Down)))
             {
@@ -145,7 +146,6 @@ namespace Bomberman.Client.GameObjects
                     RequestedMovement = true;
                     Game.Client.SendPacket(Game.Client.Client, new Packet("movedown"));
                 }
-                return true;
             }
             else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Left)))
             {
@@ -154,7 +154,6 @@ namespace Bomberman.Client.GameObjects
                     RequestedMovement = true;
                     Game.Client.SendPacket(Game.Client.Client, new Packet("moveleft"));
                 }
-                return true;
             }
             else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Right)))
             {
@@ -163,7 +162,6 @@ namespace Bomberman.Client.GameObjects
                     RequestedMovement = true;
                     Game.Client.SendPacket(Game.Client.Client, new Packet("moveright"));
                 }
-                return true;
             }
             else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Place_Bombs)))
             {
@@ -171,6 +169,17 @@ namespace Bomberman.Client.GameObjects
                 {
                     RequestBombPlacement = true;
                     Game.Client.SendPacket(Game.Client.Client, new Packet("placebomb"));
+                }
+            }
+
+            if (RequestedMovement || RequestBombPlacement)
+            {
+                if (!_walkedFirstTime)
+                {
+                    _walkedFirstTime = true;
+
+                    // Uncover the entire grid from darkness
+                    Game.GridScreen.Grid.UncoverFromDarkness();
                 }
                 return true;
             }

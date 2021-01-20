@@ -51,6 +51,92 @@ namespace Bomberman.Client.GameObjects
 
             // Uncover default spawn location tiles
             UncoverSpawnLocations();
+            CoverInDarkness();
+        }
+
+        private List<Point> GetNeighbors(int x, int y)
+        {
+            var neighbors = new List<Point>();
+            if (InBounds(x - 1, y))
+                neighbors.Add(new Point(x - 1, y));
+            if (InBounds(x + 1, y))
+                neighbors.Add(new Point(x + 1, y));
+            if (InBounds(x, y - 1))
+                neighbors.Add(new Point(x, y - 1));
+            if (InBounds(x, y + 1))
+                neighbors.Add(new Point(x, y + 1));
+            return neighbors;
+        }
+
+        public void UncoverTilesFromDarkness(Point point, List<Point> values = null)
+        {
+            var processed = values ?? new List<Point>();
+            var neighbors = GetNeighbors(point.X, point.Y);
+            neighbors.Add(point);
+            foreach (var neighbor in neighbors)
+            {
+                if (processed.Contains(neighbor)) continue;
+                var tile = GetValue(neighbor.X, neighbor.Y);
+                if (tile.Destroyable && tile.Explored)
+                {
+                    if (!tile.Destroyable && tile.Explored)
+                        tile.Foreground = Color.White;
+                    else if (tile.Explored)
+                        tile.Foreground = Color.DarkBlue;
+                    else
+                        tile.Foreground = Color.White;
+                    processed.Add(tile.Position);
+                    UncoverTilesFromDarkness(tile.Position, processed);
+                }
+                else
+                {
+                    // Also uncover but don't continue in search
+                    if (!tile.Destroyable && tile.Explored)
+                        tile.Foreground = Color.White;
+                    else if (tile.Explored)
+                        tile.Foreground = Color.DarkBlue;
+                    else
+                        tile.Foreground = Color.White;
+                    processed.Add(tile.Position);
+                }
+            }
+            Game.GridScreen.IsDirty = true;
+        }
+
+        public void CoverInDarkness()
+        {
+            for (int x = 0; x < _width; x++)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    var tile = GetValue(x, y);
+                    tile.Foreground = Color.Lerp(tile.Foreground, Color.Black, 0.85f);
+                }
+            }
+        }
+
+        public void UncoverFromDarkness()
+        {
+            for (int x = 0; x < _width; x++)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    var tile = GetValue(x, y);
+                    if (!tile.Destroyable && tile.Explored)
+                        tile.Foreground = Color.White;
+                    else if (tile.Explored)
+                        tile.Foreground = Color.DarkBlue;
+                    else
+                        tile.Foreground = Color.White;
+                }
+            }
+            // Reset player colors
+            foreach (var player in Game.Client.OtherPlayers)
+            {
+                player.Animation[0].Foreground = player.Color;
+                player.Animation.IsDirty = true;
+            }
+            Game.GridScreen.IsDirty = true;
         }
 
         private readonly Dictionary<Point, PowerUpVisual> _powerups = new Dictionary<Point, PowerUpVisual>();

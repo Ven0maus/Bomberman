@@ -21,7 +21,7 @@ namespace Bomberman.Client
 
         public readonly string PlayerName;
         private Player _player;
-        private readonly List<Player> _otherPlayers;
+        public readonly List<Player> OtherPlayers;
 
         public bool Connected { get { return Client.Connected; } }
         public bool Running { get; private set; }
@@ -43,7 +43,7 @@ namespace Bomberman.Client
             PlayerName = playerName;
             _serverIp = serverIp;
             _serverPort = serverPort;
-            _otherPlayers = new List<Player>();
+            OtherPlayers = new List<Player>();
             _commandHandlers = new Dictionary<string, Func<string, Task>>();
         }
 
@@ -152,7 +152,7 @@ namespace Bomberman.Client
                 {
                     _player
                 };
-                players.AddRange(_otherPlayers);
+                players.AddRange(OtherPlayers);
 
                 // Show all players with default value for stats
                 foreach (var player in players)
@@ -297,7 +297,7 @@ namespace Bomberman.Client
 
         public Player GetPlayerById(int id)
         {
-            var player = _otherPlayers.FirstOrDefault(a => a.Id == id);
+            var player = OtherPlayers.FirstOrDefault(a => a.Id == id);
             if (player == null)
             {
                 if (_player != null && _player.Id == id)
@@ -329,12 +329,12 @@ namespace Bomberman.Client
 
         private Task HandleGameOver(string arg)
         {
-            foreach (var p in _otherPlayers)
+            foreach (var p in OtherPlayers)
             {
                 p.IsVisible = false;
                 p.Parent = null;
             }
-            _otherPlayers.Clear();
+            OtherPlayers.Clear();
             _player.IsVisible = false;
             _player.IsFocused = false;
             _player.Parent = null;
@@ -464,7 +464,7 @@ namespace Bomberman.Client
         {
             var coords = message.Split(':');
             var position = new Point(int.Parse(coords[0]), int.Parse(coords[1]));
-            var player = _otherPlayers.FirstOrDefault(a => a.Id == int.Parse(coords[4]));
+            var player = OtherPlayers.FirstOrDefault(a => a.Id == int.Parse(coords[4]));
             if (player != null)
             {
                 var bomb = new Bomb(player, position, int.Parse(coords[2]), int.Parse(coords[3]))
@@ -500,11 +500,14 @@ namespace Bomberman.Client
             var position = new Point(int.Parse(coords[1]), int.Parse(coords[2]));
             var playerName = coords[3];
             var color = new Color(byte.Parse(coords[4]), byte.Parse(coords[5]), byte.Parse(coords[6]));
-            _otherPlayers.Add(new Player(position, int.Parse(coords[0]), color, false)
+            var player = new Player(position, int.Parse(coords[0]), color, false)
             {
                 Parent = Game.GridScreen,
                 Name = playerName
-            });
+            };
+            // Make darker shade in the beginning
+            player.Animation[0].Foreground = Color.Lerp(player.Color, Color.Black, 0.85f);
+            OtherPlayers.Add(player);
             return Task.CompletedTask;
         }
 
@@ -518,6 +521,7 @@ namespace Bomberman.Client
                 Parent = Game.GridScreen,
                 Name = PlayerName
             };
+            Game.GridScreen.Grid.UncoverTilesFromDarkness(_player.Position);
             return Task.CompletedTask;
         }
 
