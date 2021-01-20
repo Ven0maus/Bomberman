@@ -27,9 +27,6 @@ namespace Bomberman.Client.Graphics
             // Set the new theme colors         
             ThemeColors = colors;
 
-            // Initialize default keybindings
-            KeybindingsManager.InitializeDefaultKeybindings();
-
             InitializeButtons();
         }
 

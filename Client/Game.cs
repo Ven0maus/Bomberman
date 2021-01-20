@@ -38,6 +38,9 @@ namespace Bomberman.Client
 
         private static void Init()
         {
+            // Initialize default keybindings
+            KeybindingsManager.InitializeDefaultKeybindings();
+
             //Settings.AllowWindowResize = false;
             Settings.ResizeMode = Settings.WindowResizeOptions.Fit;
 
