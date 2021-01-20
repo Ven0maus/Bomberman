@@ -10,6 +10,7 @@ namespace Bomberman.Client.Graphics
     public class MainMenuScreen : ControlsConsole
     {
         public ServerConnectionScreen ServerConnectionScreen { get; private set; }
+        public OptionsScreen KeybindingsScreen { get; private set; }
 
         private readonly int _width, _height;
         public MainMenuScreen(int width, int height) : base(width, height)
@@ -81,15 +82,35 @@ __________              ___.
             multiPlayerButton.Click += MultiPlayerButton_Click;
             Add(multiPlayerButton);
 
+            var keybindingsButton = new Button(20, 3)
+            {
+                Text = "Keybindings",
+                Position = new Point((_width / 2) - 10, (_height / 2) + 4),
+                UseMouse = true,
+                UseKeyboard = false,
+            };
+            keybindingsButton.Click += KeybindingsButton_Click; ;
+            Add(keybindingsButton);
+
             var exitButton = new Button(20, 3)
             {
                 Text = "Exit",
-                Position = new Point((_width / 2) - 10, (_height / 2) + 4),
+                Position = new Point((_width / 2) - 10, (_height / 2) + 8),
                 UseMouse = true,
                 UseKeyboard = false,
             };
             exitButton.Click += ExitButton_Click;
             Add(exitButton);
+        }
+
+        private void KeybindingsButton_Click(object sender, EventArgs e)
+        {
+            if (KeybindingsScreen == null)
+                KeybindingsScreen = new OptionsScreen(_width, _height);
+            KeybindingsScreen.IsVisible = true;
+            IsVisible = false;
+            Global.CurrentScreen = KeybindingsScreen;
+            KeybindingsScreen.IsFocused = true;
         }
 
         private void ExitButton_Click(object sender, EventArgs e)

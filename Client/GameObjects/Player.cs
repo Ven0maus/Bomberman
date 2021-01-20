@@ -129,7 +129,7 @@ namespace Bomberman.Client.GameObjects
                 return base.ProcessKeyboard(info);
             }
 
-            if (info.IsKeyPressed(Keys.Z))
+            if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Up)))
             {
                 if (!RequestedMovement)
                 {
@@ -138,7 +138,7 @@ namespace Bomberman.Client.GameObjects
                 }
                 return true;
             }
-            else if (info.IsKeyPressed(Keys.S))
+            else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Down)))
             {
                 if (!RequestedMovement)
                 {
@@ -147,7 +147,7 @@ namespace Bomberman.Client.GameObjects
                 }
                 return true;
             }
-            else if (info.IsKeyPressed(Keys.Q))
+            else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Left)))
             {
                 if (!RequestedMovement)
                 {
@@ -156,7 +156,7 @@ namespace Bomberman.Client.GameObjects
                 }
                 return true;
             }
-            else if (info.IsKeyPressed(Keys.D))
+            else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Right)))
             {
                 if (!RequestedMovement)
                 {
@@ -165,7 +165,7 @@ namespace Bomberman.Client.GameObjects
                 }
                 return true;
             }
-            else if (info.IsKeyPressed(Keys.Space))
+            else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Place_Bombs)))
             {
                 if (!RequestBombPlacement)
                 {
