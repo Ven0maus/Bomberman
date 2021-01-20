@@ -33,7 +33,7 @@ namespace Bomberman.Client.ServerSide
             try
             {
                 // First check if there is data available
-                if (client.Available == 0)
+                if (client == null || client.Available == 0)
                     return;
 
                 if (!_packetProtocols.TryGetValue(client, out PacketProtocol packetProtocol))

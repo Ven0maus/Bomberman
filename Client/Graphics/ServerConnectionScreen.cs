@@ -201,9 +201,9 @@ __________              ___.
                 return;
             }
 
-            if (_playerName.Text.Length > 20)
+            if (_playerName.Text.Length > 10)
             {
-                ShowError($"Player name must be within 20 characters in length [was: {_playerName.Text.Length}].");
+                ShowError($"Player name must be within 10 characters in length [was: {_playerName.Text.Length}].");
                 return;
             }
 

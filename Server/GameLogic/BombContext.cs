@@ -208,36 +208,45 @@ namespace Server.GameLogic
             var data = new DetonationData();
             data.BombIds.Add(Id);
             data.CellPositions.AddRange(cellPositions);
-            foreach (var pos in cellPositions)
+
+            // Game over, kill players
+            var deadPlayers = _game.Players
+                .Where(a => a.Value.Alive && a.Value.SecondsInvincible == 0 && cellPositions.Contains(a.Value.Position))
+                .Select(a => a.Value)
+                .ToList();
+
+            if (!_game.GameOver && deadPlayers.Any())
             {
-                // Game over, kill player
-                var deadPlayers = _game.Players
-                    .Where(a => a.Value.Position == pos && a.Value.Alive && a.Value.SecondsInvincible == 0)
-                    .Select(a => a.Value)
-                    .ToList();
-                if (!_game.GameOver && deadPlayers.Any())
+                foreach (var deadPlayer in deadPlayers)
                 {
-                    foreach (var deadPlayer in deadPlayers)
-                    {
-                        deadPlayer.Alive = false;
+                    deadPlayer.Alive = false;
 
-                        // Let players know this player died
-                        foreach (var player in _game.Players)
-                            Network.Instance.SendPacket(player.Key, new Packet("playerdied", deadPlayer.Id.ToString()));
-                    }
-
-                    // Check if there is 1 or no players left alive, then reset the game
-                    if (_game.Players.Count(a => a.Value.Alive) <= 1 && !_game.GameOver)
-                    {
-                        _game.GameOver = true;
-                        Task.Run(async () =>
-                        {
-                            await Task.Delay(3000);
-                            Network.Instance.ResetGame();
-                        });
-                    }
+                    // Let players know this player died
+                    foreach (var player in _game.Players)
+                        Network.Instance.SendPacket(player.Key, new Packet("playerdied", deadPlayer.Id.ToString()));
                 }
 
+                // Add kills but not count himself =)
+                _placedBy.Kills += deadPlayers.Count(a => a.Id != _placedBy.Id);
+
+                // Notify players of kill score
+                foreach (var player in _game.Players)
+                    Network.Instance.SendPacket(player.Key, new Packet("showplayers", _placedBy.Id + ":" + _placedBy.Kills));
+
+                // Check if there is 1 or no players left alive, then reset the game
+                if (_game.Players.Count(a => a.Value.Alive) <= 1 && !_game.GameOver)
+                {
+                    _game.GameOver = true;
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(3000);
+                        Network.Instance.ResetGame();
+                    });
+                }
+            }
+
+            foreach (var pos in cellPositions)
+            {
                 var cell = _grid.GetValue(pos.X, pos.Y);
 
                 // Destroy powerup in blast

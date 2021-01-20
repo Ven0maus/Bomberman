@@ -9,7 +9,7 @@ namespace Bomberman.Client
     {
         public static GameClient Client { get; set; }
 
-        public const int GameWidth = 90;
+        public const int GameWidth = 145;
         public const int GameHeight = 45;
         public const int GridWidth = 15;
         public const int GridHeight = 15;

@@ -72,7 +72,8 @@ namespace Bomberman.Client.ServerSide
             "moveleft",
             "moveright",
             "moveup",
-            "movedown"
+            "movedown",
+            "showplayers"
         };
 
         private static byte _lastOpCodeNr;

@@ -20,6 +20,8 @@ namespace Bomberman.Client.GameObjects
 
         public bool _controllable;
 
+        public int Kills = 0;
+
         public Player(Point position, int id, Color color, bool controllable = true) : base(Color.White, Color.Transparent, 18)
         {
             Alive = true;
@@ -132,7 +134,6 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestedMovement)
                 {
                     RequestedMovement = true;
-                    var targetPosition = Position + new Point(0, -1);
                     Game.Client.SendPacket(Game.Client.Client, new Packet("moveup"));
                 }
                 return true;
@@ -142,7 +143,6 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestedMovement)
                 {
                     RequestedMovement = true;
-                    var targetPosition = Position + new Point(0, 1);
                     Game.Client.SendPacket(Game.Client.Client, new Packet("movedown"));
                 }
                 return true;
@@ -152,7 +152,6 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestedMovement)
                 {
                     RequestedMovement = true;
-                    var targetPosition = Position + new Point(-1, 0);
                     Game.Client.SendPacket(Game.Client.Client, new Packet("moveleft"));
                 }
                 return true;
@@ -162,7 +161,6 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestedMovement)
                 {
                     RequestedMovement = true;
-                    var targetPosition = Position + new Point(1, 0);
                     Game.Client.SendPacket(Game.Client.Client, new Packet("moveright"));
                 }
                 return true;

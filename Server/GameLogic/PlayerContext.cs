@@ -14,6 +14,8 @@ namespace Server.GameLogic
 
         public int MaxBombs = 1;
         public int BombStrength = 1;
+        public int Kills;
+
         public int SecondsInvincible { get; private set; }
         public int BombsPlaced = 0;
         public Point Position;

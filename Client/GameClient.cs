@@ -128,6 +128,7 @@ namespace Bomberman.Client
                 _commandHandlers["playerdied"] = HandlePlayerDied;
                 _commandHandlers["gameover"] = HandleGameOver;
                 _commandHandlers["invincibility"] = HandleInvincibilityPowerup;
+                _commandHandlers["showplayers"] = HandleShowPlayers;
 
                 // Send our player name to the server
                 SendPacket(Client, new Packet("playername", PlayerName));
@@ -141,6 +142,37 @@ namespace Bomberman.Client
             }
 
             return false;
+        }
+
+        private Task HandleShowPlayers(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                var players = new List<Player>
+                {
+                    _player
+                };
+                players.AddRange(_otherPlayers);
+
+                // Show all players with default value for stats
+                foreach (var player in players)
+                {
+                    Game.GridScreen.ShowStats(player.Id);
+                }
+            }
+            else
+            {
+                var data = message.Split(':');
+                var playerId = int.Parse(data[0]);
+                var kills = int.Parse(data[1]);
+                int? bombs = null, strength = null;
+                if (data.Length > 2)
+                    bombs = int.Parse(data[2]);
+                if (data.Length > 3)
+                    strength = int.Parse(data[3]);
+                Game.GridScreen.ShowStats(playerId, kills, bombs, strength);
+            }
+            return Task.CompletedTask;
         }
 
         private Task HandleMovementDown(string message)
@@ -263,7 +295,7 @@ namespace Bomberman.Client
             return Task.CompletedTask;
         }
 
-        private Player GetPlayerById(int id)
+        public Player GetPlayerById(int id)
         {
             var player = _otherPlayers.FirstOrDefault(a => a.Id == id);
             if (player == null)

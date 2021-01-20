@@ -47,9 +47,13 @@ namespace Server.GameLogic
             {
                 case PowerUp.ExtraBomb:
                     player.MaxBombs++;
+                    foreach (var p in _game.Players)
+                        Network.Instance.SendPacket(p.Key, new Packet("showplayers", player.Id + ":" + player.Kills + ":" + player.MaxBombs));
                     break;
                 case PowerUp.BombStrength:
                     player.BombStrength++;
+                    foreach (var p in _game.Players)
+                        Network.Instance.SendPacket(p.Key, new Packet("showplayers", player.Id + ":" + player.Kills + ":" + player.MaxBombs + ":" + player.BombStrength));
                     break;
                 case PowerUp.Invincibility:
                     player.StartInvincibility();

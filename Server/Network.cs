@@ -305,9 +305,9 @@ namespace Server
                         string playerName = packet.Arguments;
 
                         // Sanity check for name hacks
-                        if (string.IsNullOrWhiteSpace(playerName) || playerName.Length > 20)
+                        if (string.IsNullOrWhiteSpace(playerName) || playerName.Length > 10)
                         {
-                            DisconnectClient(client, $"Name: [{playerName}] is not valid.");
+                            DisconnectClient(client, $"Name: [{playerName}] is too long, must be within 10 characters.");
                             return;
                         }
 

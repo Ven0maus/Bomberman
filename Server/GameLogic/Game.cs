@@ -39,7 +39,7 @@ namespace Server.GameLogic
             Color.Orange,
             Color.Yellow,
             Color.LightGreen,
-            Color.Brown,
+            Color.LightCoral,
             Color.Magenta,
             Color.White
         };
@@ -100,6 +100,9 @@ namespace Server.GameLogic
                             ":" + otherPlayer.Value.Color.R + ":" + otherPlayer.Value.Color.G + ":" + otherPlayer.Value.Color.B));
                     }
                 }
+
+                // Show player overview
+                Network.Instance.SendPacket(player.Key, new Packet("showplayers"));
             }
         }
 
