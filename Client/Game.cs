@@ -1,4 +1,5 @@
-﻿using Bomberman.Client.Graphics;
+﻿using Bomberman.Client.GameObjects;
+using Bomberman.Client.Graphics;
 using Microsoft.Xna.Framework;
 using SadConsole;
 using System;
@@ -14,6 +15,8 @@ namespace Bomberman.Client
         public const int GridWidth = 15;
         public const int GridHeight = 15;
 
+        public static bool Singleplayer { get; set; }
+
         public static Random Random { get; private set; } = new Random();
 
         public static Font Font { get; private set; }
@@ -21,6 +24,7 @@ namespace Bomberman.Client
         public static GridScreen GridScreen { get; set; }
         public static MainMenuScreen MainMenuScreen { get; private set; }
         public static ClientWaitingLobby ClientWaitingLobby { get; set; }
+        public static Player Player { get; set; }
 
         private static void Main()
         {
@@ -65,6 +69,15 @@ namespace Bomberman.Client
             {
                 ClientWaitingLobby.IsVisible = false;
                 ClientWaitingLobby.IsFocused = false;
+            }
+            else
+            {
+                // Initialize player & uncover starter tiles
+                Player = new Player(GridScreen.Grid.GetAvailableSpawnPosition(), 0, GridScreen.Grid.GetAvailableColor(), true)
+                {
+                    Parent = GridScreen
+                };
+                GridScreen.Grid.UncoverTilesFromDarkness(Player.Position);
             }
         }
 

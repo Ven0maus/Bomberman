@@ -23,6 +23,11 @@ namespace Bomberman.Client.GameObjects
             _grid.GetValue(position.X, position.Y).HasBomb = true;
         }
 
+        public void StartDetonationPhase()
+        {
+            // TODO
+        }
+
         private List<Point> _cellPositions;
         public List<Point> GetCellPositions()
         {
@@ -98,6 +103,9 @@ namespace Bomberman.Client.GameObjects
             Animation[0].Foreground = Color.Transparent;
             Animation.IsDirty = true;
             Parent = null;
+
+            // Remove from bombs collection
+            _grid.Bombs.Remove(Position);
 
             // Remove from bombs collection
             foreach (var pos in GetCellPositions())

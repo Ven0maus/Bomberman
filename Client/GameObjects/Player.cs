@@ -1,6 +1,5 @@
 ﻿using Bomberman.Client.ServerSide;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
 using SadConsole.Entities;
 using System;
 
@@ -21,6 +20,8 @@ namespace Bomberman.Client.GameObjects
         public bool _controllable;
 
         public int Kills = 0;
+
+        private int _bombCounter = 0;
 
         public Player(Point position, int id, Color color, bool controllable = true) : base(Color.White, Color.Transparent, 18)
         {
@@ -140,7 +141,25 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestedMovement)
                 {
                     RequestedMovement = true;
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("moveup"));
+                    if (!Game.Singleplayer)
+                    {
+                        Game.Client.SendPacket(Game.Client.Client, new Packet("moveup"));
+                    }
+                    else
+                    {
+                        var targetPos = Position + new Point(0, -1);
+                        if (Game.GridScreen.Grid.CanMove(targetPos.X, targetPos.Y))
+                            Position = targetPos;
+                        RequestedMovement = false;
+
+                        if (!_walkedFirstTime)
+                        {
+                            _walkedFirstTime = true;
+
+                            // Uncover the entire grid from darkness
+                            Game.GridScreen.Grid.UncoverFromDarkness(!Game.Singleplayer);
+                        }
+                    }
                 }
             }
             else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Down)))
@@ -148,7 +167,25 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestedMovement)
                 {
                     RequestedMovement = true;
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("movedown"));
+                    if (!Game.Singleplayer)
+                    {
+                        Game.Client.SendPacket(Game.Client.Client, new Packet("movedown"));
+                    }
+                    else
+                    {
+                        var targetPos = Position + new Point(0, 1);
+                        if (Game.GridScreen.Grid.CanMove(targetPos.X, targetPos.Y))
+                            Position = targetPos;
+                        RequestedMovement = false;
+
+                        if (!_walkedFirstTime)
+                        {
+                            _walkedFirstTime = true;
+
+                            // Uncover the entire grid from darkness
+                            Game.GridScreen.Grid.UncoverFromDarkness(!Game.Singleplayer);
+                        }
+                    }
                 }
             }
             else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Left)))
@@ -156,7 +193,25 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestedMovement)
                 {
                     RequestedMovement = true;
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("moveleft"));
+                    if (!Game.Singleplayer)
+                    {
+                        Game.Client.SendPacket(Game.Client.Client, new Packet("moveleft"));
+                    }
+                    else
+                    {
+                        var targetPos = Position + new Point(-1, 0);
+                        if (Game.GridScreen.Grid.CanMove(targetPos.X, targetPos.Y))
+                            Position = targetPos;
+                        RequestedMovement = false;
+
+                        if (!_walkedFirstTime)
+                        {
+                            _walkedFirstTime = true;
+
+                            // Uncover the entire grid from darkness
+                            Game.GridScreen.Grid.UncoverFromDarkness(!Game.Singleplayer);
+                        }
+                    }
                 }
             }
             else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Move_Right)))
@@ -164,7 +219,25 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestedMovement)
                 {
                     RequestedMovement = true;
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("moveright"));
+                    if (!Game.Singleplayer)
+                    {
+                        Game.Client.SendPacket(Game.Client.Client, new Packet("moveright"));
+                    }
+                    else
+                    {
+                        var targetPos = Position + new Point(1, 0);
+                        if (Game.GridScreen.Grid.CanMove(targetPos.X, targetPos.Y))
+                            Position = targetPos;
+                        RequestedMovement = false;
+
+                        if (!_walkedFirstTime)
+                        {
+                            _walkedFirstTime = true;
+
+                            // Uncover the entire grid from darkness
+                            Game.GridScreen.Grid.UncoverFromDarkness(!Game.Singleplayer);
+                        }
+                    }
                 }
             }
             else if (info.IsKeyPressed(KeybindingsManager.GetKeybinding(Keybindings.Place_Bombs)))
@@ -172,7 +245,27 @@ namespace Bomberman.Client.GameObjects
                 if (!RequestBombPlacement)
                 {
                     RequestBombPlacement = true;
-                    Game.Client.SendPacket(Game.Client.Client, new Packet("placebomb"));
+                    if (!Game.Singleplayer)
+                    {
+                        Game.Client.SendPacket(Game.Client.Client, new Packet("placebomb"));
+                    }
+                    else
+                    {
+                        var bomb = new Bomb(this, Position, BombStrength, _bombCounter++)
+                        {
+                            Parent = Game.GridScreen
+                        };
+                        Game.GridScreen.Grid.Bombs.Add(Position, bomb);
+                        RequestBombPlacement = true;
+
+                        if (!_walkedFirstTime)
+                        {
+                            _walkedFirstTime = true;
+
+                            // Uncover the entire grid from darkness
+                            Game.GridScreen.Grid.UncoverFromDarkness(!Game.Singleplayer);
+                        }
+                    }
                 }
             }
 
@@ -183,7 +276,7 @@ namespace Bomberman.Client.GameObjects
                     _walkedFirstTime = true;
 
                     // Uncover the entire grid from darkness
-                    Game.GridScreen.Grid.UncoverFromDarkness();
+                    Game.GridScreen.Grid.UncoverFromDarkness(!Game.Singleplayer);
                 }
                 return true;
             }

@@ -12,6 +12,49 @@ namespace Bomberman.Client.GameObjects
 
         public readonly Dictionary<Point, Bomb> Bombs = new Dictionary<Point, Bomb>();
 
+        private readonly List<Point> _spawnPositions = new List<Point>
+        {
+            // Top Left, Top Middle, Top Right
+            new Point(0,0),
+            new Point((Game.GridWidth / 2)-1, 0),
+            new Point(Game.GridWidth -1, 0),
+
+            // Middle Left, Middle Right
+            new Point(0, (Game.GridHeight / 2) - 1),
+            new Point(Game.GridWidth -1, (Game.GridHeight / 2) - 1), 
+
+            // Bottom Left, Bottom Middle,  Bottom right
+            new Point(0, Game.GridHeight -1),
+            new Point((Game.GridWidth / 2)-1, Game.GridHeight -1),
+            new Point(Game.GridWidth -1, Game.GridHeight -1),
+        };
+
+        private readonly List<Color> _availableColors = new List<Color>
+        {
+            Color.Red,
+            Color.Cyan,
+            Color.Orange,
+            Color.Yellow,
+            Color.LightGreen,
+            Color.LightCoral,
+            Color.Magenta,
+            Color.White
+        };
+
+        public Color GetAvailableColor()
+        {
+            var color = _availableColors[Game.Random.Next(0, _availableColors.Count)];
+            _availableColors.Remove(color);
+            return color;
+        }
+
+        public Point GetAvailableSpawnPosition()
+        {
+            var pos = _spawnPositions[Game.Random.Next(0, _spawnPositions.Count)];
+            _spawnPositions.Remove(pos);
+            return pos;
+        }
+
         public Tile this[int x, int y]
         {
             get { return GetValue(x, y); }
@@ -115,7 +158,7 @@ namespace Bomberman.Client.GameObjects
             }
         }
 
-        public void UncoverFromDarkness()
+        public void UncoverFromDarkness(bool multiplayer)
         {
             for (int x = 0; x < _width; x++)
             {
@@ -130,12 +173,21 @@ namespace Bomberman.Client.GameObjects
                         tile.Foreground = Color.White;
                 }
             }
-            // Reset player colors
-            foreach (var player in Game.Client.OtherPlayers)
+
+            if (multiplayer)
             {
-                player.Animation[0].Foreground = player.Color;
-                player.Animation.IsDirty = true;
+                // Reset player colors
+                foreach (var player in Game.Client.OtherPlayers)
+                {
+                    player.Animation[0].Foreground = player.Color;
+                    player.Animation.IsDirty = true;
+                }
             }
+            else
+            {
+                // TODO
+            }
+
             Game.GridScreen.IsDirty = true;
         }
 

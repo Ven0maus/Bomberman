@@ -11,6 +11,7 @@ namespace Bomberman.Client.Graphics
     {
         public ServerConnectionScreen ServerConnectionScreen { get; private set; }
         public OptionsScreen KeybindingsScreen { get; private set; }
+        public GameConfigurationScreen GameConfigurationScreen { get; private set; }
 
         private readonly int _width, _height;
         public MainMenuScreen(int width, int height) : base(width, height)
@@ -107,10 +108,11 @@ __________              ___.
         {
             if (KeybindingsScreen == null)
                 KeybindingsScreen = new OptionsScreen(_width, _height);
-            KeybindingsScreen.IsVisible = true;
             IsVisible = false;
-            Global.CurrentScreen = KeybindingsScreen;
+            IsFocused = false;
+            KeybindingsScreen.IsVisible = true;
             KeybindingsScreen.IsFocused = true;
+            Global.CurrentScreen = KeybindingsScreen;
         }
 
         private void ExitButton_Click(object sender, EventArgs e)
@@ -120,19 +122,26 @@ __________              ___.
 
         private void MultiPlayerButton_Click(object sender, EventArgs e)
         {
+            Game.Singleplayer = false;
+
             // Show server connection screen
             if (ServerConnectionScreen == null)
                 ServerConnectionScreen = new ServerConnectionScreen(_width, _height);
-            ServerConnectionScreen.IsVisible = true;
             IsVisible = false;
-            Global.CurrentScreen = ServerConnectionScreen;
+            IsFocused = false;
+            ServerConnectionScreen.IsVisible = true;
             ServerConnectionScreen.IsFocused = true;
+            Global.CurrentScreen = ServerConnectionScreen;
         }
 
         private void SinglePlayerButton_Click(object sender, EventArgs e)
         {
-            // Not for alpha release
-            throw new NotImplementedException();
+            Game.Singleplayer = true;
+            GameConfigurationScreen = new GameConfigurationScreen(_width, _height);
+            IsVisible = false;
+            IsFocused = false;
+            GameConfigurationScreen.IsFocused = true;
+            Global.CurrentScreen = GameConfigurationScreen;
         }
     }
 }
