@@ -12,7 +12,7 @@ namespace Server.GameLogic
         public int _bombCounter = 0;
         public new Dictionary<Point, BombContext> Bombs;
         private readonly Game _game;
-        public GridContext(Game game, int width, int height) : base(width, height)
+        public GridContext(Game game, int width, int height) : base(width, height, false)
         {
             _game = game;
             Bombs = new Dictionary<Point, BombContext>();
@@ -72,31 +72,6 @@ namespace Server.GameLogic
                 if (p.Key != client)
                 {
                     Network.Instance.SendPacket(p.Key, new Packet("pickuppowerup", $"{position.X}:{position.Y}"));
-                }
-            }
-        }
-
-        private void SetPowerUps()
-        {
-            for (int x=0; x < _width; x++)
-            {
-                for (int y = 0; y < _height; y++)
-                {
-                    // Small chance to contain a random powerup
-                    if (Game.Random.Next(0, 100) < 25)
-                    {
-                        var tile = GetValue(x, y);
-                        if (!tile.Explored && tile.Destroyable)
-                        {
-                            var randomValue = Game.Random.Next(1, 8);
-                            if (randomValue <= 3)
-                                tile.PowerUp = PowerUp.BombStrength;
-                            else if (randomValue <= 6)
-                                tile.PowerUp = PowerUp.ExtraBomb;
-                            else
-                                tile.PowerUp = PowerUp.Invincibility;
-                        }
-                    }
                 }
             }
         }

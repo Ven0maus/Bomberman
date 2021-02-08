@@ -61,7 +61,7 @@ namespace Bomberman.Client.GameObjects
             private set { Cells[y * _width + x] = value; }
         }
 
-        public Grid(int width, int height)
+        public Grid(int width, int height, bool singleplayer)
         {
             _width = width;
             _height = height;
@@ -95,6 +95,37 @@ namespace Bomberman.Client.GameObjects
             // Uncover default spawn location tiles
             UncoverSpawnLocations();
             CoverInDarkness();
+
+            if (singleplayer)
+            {
+                // Create power ups client side
+                SetPowerUps();
+            }
+        }
+
+        protected void SetPowerUps()
+        {
+            for (int x = 0; x < _width; x++)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    // Small chance to contain a random powerup
+                    if (Game.Random.Next(0, 100) < 25)
+                    {
+                        var tile = GetValue(x, y);
+                        if (!tile.Explored && tile.Destroyable)
+                        {
+                            var randomValue = Game.Random.Next(1, 8);
+                            if (randomValue <= 3)
+                                tile.PowerUp = PowerUp.BombStrength;
+                            else if (randomValue <= 6)
+                                tile.PowerUp = PowerUp.ExtraBomb;
+                            else
+                                tile.PowerUp = PowerUp.Invincibility;
+                        }
+                    }
+                }
+            }
         }
 
         private List<Point> GetNeighbors(int x, int y)
@@ -191,6 +222,31 @@ namespace Bomberman.Client.GameObjects
             Game.GridScreen.IsDirty = true;
         }
 
+        public void CheckPowerup(Point position)
+        {
+            var cell = GetValue(position.X, position.Y);
+
+            if (cell.PowerUp == PowerUp.None) return;
+
+            switch (cell.PowerUp)
+            {
+                case PowerUp.ExtraBomb:
+                    Game.Player.MaxBombs++;
+                    break;
+                case PowerUp.BombStrength:
+                    Game.Player.BombStrength++;
+                    break;
+                case PowerUp.Invincibility:
+                    // TODO:
+                    //Game.Player.StartInvincibility();
+                    break;
+                default:
+                    break;
+            }
+
+            DeletePowerUp(position);
+        }
+
         private readonly Dictionary<Point, PowerUpVisual> _powerups = new Dictionary<Point, PowerUpVisual>();
         public void SpawnPowerUp(Point position, PowerUp powerUp)
         {
@@ -209,6 +265,7 @@ namespace Bomberman.Client.GameObjects
         {
             if (_powerups.TryGetValue(position, out PowerUpVisual visual))
             {
+                GetValue(position.X, position.Y).PowerUp = PowerUp.None;
                 visual.Parent = null;
                 _powerups.Remove(position);
             }

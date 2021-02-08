@@ -113,6 +113,12 @@ namespace Bomberman.Client.GameObjects
                     continue; // Let other bomb handle this one
                 }
 
+                // Check if we need to spawn a powerup here
+                if (Game.Singleplayer && cell.PowerUp != Graphics.PowerUp.None)
+                {
+                    _grid.SpawnPowerUp(pos, cell.PowerUp);
+                }
+
                 _grid.Explore(cell.Position.X, cell.Position.Y);
                 cell.ContainsFireFrom.Remove(Id);
             }
@@ -125,6 +131,11 @@ namespace Bomberman.Client.GameObjects
         {
             Animation[0].Foreground = Color.Transparent;
             Animation.IsDirty = true;
+
+            var bombLocation = _grid.GetValue(Position.X, Position.Y);
+            bombLocation.HasBomb = false;
+
+            Game.Player.BombsPlaced--;
 
             // Remove from bombs collection
             _grid.Bombs.Remove(Position);

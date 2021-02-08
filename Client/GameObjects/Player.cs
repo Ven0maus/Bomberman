@@ -127,6 +127,15 @@ namespace Bomberman.Client.GameObjects
 
         private bool _walkedFirstTime = false;
 
+        private void Move(Point position)
+        {
+            if (Game.GridScreen.Grid.CanMove(position.X, position.Y))
+            {
+                Game.GridScreen.Grid.CheckPowerup(position);
+                Position = position;
+            }
+        }
+
         public override bool ProcessKeyboard(SadConsole.Input.Keyboard info)
         {
             if (!_controllable) return base.ProcessKeyboard(info);
@@ -148,8 +157,8 @@ namespace Bomberman.Client.GameObjects
                     else
                     {
                         var targetPos = Position + new Point(0, -1);
-                        if (Game.GridScreen.Grid.CanMove(targetPos.X, targetPos.Y))
-                            Position = targetPos;
+                        Move(targetPos);
+
                         RequestedMovement = false;
 
                         if (!_walkedFirstTime)
@@ -174,8 +183,7 @@ namespace Bomberman.Client.GameObjects
                     else
                     {
                         var targetPos = Position + new Point(0, 1);
-                        if (Game.GridScreen.Grid.CanMove(targetPos.X, targetPos.Y))
-                            Position = targetPos;
+                        Move(targetPos);
                         RequestedMovement = false;
 
                         if (!_walkedFirstTime)
@@ -200,8 +208,7 @@ namespace Bomberman.Client.GameObjects
                     else
                     {
                         var targetPos = Position + new Point(-1, 0);
-                        if (Game.GridScreen.Grid.CanMove(targetPos.X, targetPos.Y))
-                            Position = targetPos;
+                        Move(targetPos);
                         RequestedMovement = false;
 
                         if (!_walkedFirstTime)
@@ -226,8 +233,7 @@ namespace Bomberman.Client.GameObjects
                     else
                     {
                         var targetPos = Position + new Point(1, 0);
-                        if (Game.GridScreen.Grid.CanMove(targetPos.X, targetPos.Y))
-                            Position = targetPos;
+                        Move(targetPos);
                         RequestedMovement = false;
 
                         if (!_walkedFirstTime)
@@ -251,13 +257,18 @@ namespace Bomberman.Client.GameObjects
                     }
                     else
                     {
+                        if (Game.Player.BombsPlaced == Game.Player.MaxBombs)
+                        {
+                            RequestBombPlacement = false;
+                            return true;
+                        }
                         var bomb = new Bomb(this, Position, BombStrength, _bombCounter++)
                         {
                             Parent = Game.GridScreen
                         };
+                        Game.Player.BombsPlaced++;
                         Game.GridScreen.Grid.Bombs.Add(Position, bomb);
                         bomb.StartDetonationPhase();
-                        RequestBombPlacement = true;
 
                         if (!_walkedFirstTime)
                         {
@@ -266,6 +277,7 @@ namespace Bomberman.Client.GameObjects
                             // Uncover the entire grid from darkness
                             Game.GridScreen.Grid.UncoverFromDarkness(!Game.Singleplayer);
                         }
+                        RequestBombPlacement = false;
                     }
                 }
             }

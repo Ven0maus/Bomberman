@@ -24,6 +24,9 @@ namespace Bomberman.Client
         public static GridScreen GridScreen { get; set; }
         public static MainMenuScreen MainMenuScreen { get; private set; }
         public static ClientWaitingLobby ClientWaitingLobby { get; set; }
+        /// <summary>
+        /// Can only be accessed in a singleplayer game
+        /// </summary>
         public static Player Player { get; set; }
 
         private static void Main()

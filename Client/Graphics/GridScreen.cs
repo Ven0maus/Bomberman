@@ -18,7 +18,7 @@ namespace Bomberman.Client.Graphics
         public GridScreen(int width, int height, Font font) 
             : base(width, height, font)
         {
-            Grid = new Grid(width, height);
+            Grid = new Grid(width, height, Game.Singleplayer);
 
             _charactersConsole = new Console(6, Game.GridHeight)
             {
