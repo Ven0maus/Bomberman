@@ -420,6 +420,7 @@ namespace Bomberman.Client
             var data = message.Split(':');
             var position = new Point(int.Parse(data[0]), int.Parse(data[1]));
             PowerUp powerUpType = (PowerUp)int.Parse(data[2]);
+            if (powerUpType == PowerUp.None) return Task.CompletedTask;
             Game.GridScreen.Grid.SpawnPowerUp(position, powerUpType);
             return Task.CompletedTask;
         }
