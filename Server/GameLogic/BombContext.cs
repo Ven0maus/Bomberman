@@ -156,6 +156,7 @@ namespace Server.GameLogic
             foreach (var pos in powerupSpawns)
             {
                 var cell = _grid.GetValue(pos.X, pos.Y);
+                if (cell.PowerUp == PowerUp.None) continue; // Extra sanity check
 
                 // Tell client to spawn a powerup on this tile
                 Network.Instance.SendPacket(_placedBy.Client, new Packet("spawnpowerup", $"{pos.X}:{pos.Y}:{(int)cell.PowerUp}"));
