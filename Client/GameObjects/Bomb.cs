@@ -42,6 +42,7 @@ namespace Bomberman.Client.GameObjects
 
         public void StartDetonationPhase()
         {
+            if (!Game.Singleplayer) return;
             _bombTicking = true;
         }
 
@@ -152,15 +153,26 @@ namespace Bomberman.Client.GameObjects
                 cell.ContainsFireFrom.Add(Id);
                 cell.Glyph = 4;
                 cell.Foreground = Color.White;
+
+                if (Game.Singleplayer && cell.HasBomb)
+                {
+                    // Instantly detonate the bomb
+                    var bomb = _grid.Bombs[cell.Position];
+                    if (bomb != this)
+                        bomb.Detonate();
+                }
             }
 
             Game.GridScreen.IsDirty = true;
 
-            _bombExploded = true;
-            _bombTimer.TimerAmount = new TimeSpan(0, 0, 0, 0, 1250);
-            _bombTimer.Restart();
-            _bombTicking = true;
-            _bombTimer.IsPaused = false;
+            if (Game.Singleplayer)
+            {
+                _bombExploded = true;
+                _bombTimer.TimerAmount = new TimeSpan(0, 0, 0, 0, 1250);
+                _bombTimer.Restart();
+                _bombTicking = true;
+                _bombTimer.IsPaused = false;
+            }
         }
     }
 }

@@ -129,6 +129,7 @@ namespace Bomberman.Client.GameObjects
 
         private void Move(Point position)
         {
+            if (!Game.Singleplayer) return;
             if (Game.GridScreen.Grid.CanMove(position.X, position.Y))
             {
                 Game.GridScreen.Grid.CheckPowerup(position);
