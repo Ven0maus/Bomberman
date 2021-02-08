@@ -256,6 +256,7 @@ namespace Bomberman.Client.GameObjects
                             Parent = Game.GridScreen
                         };
                         Game.GridScreen.Grid.Bombs.Add(Position, bomb);
+                        bomb.StartDetonationPhase();
                         RequestBombPlacement = true;
 
                         if (!_walkedFirstTime)

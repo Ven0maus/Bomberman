@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using SadConsole.Entities;
+using System;
 using System.Collections.Generic;
 
 namespace Bomberman.Client.GameObjects
@@ -11,21 +12,43 @@ namespace Bomberman.Client.GameObjects
         private readonly Grid _grid;
 
         protected readonly Player _placedBy;
+        private readonly SadConsole.Timer _bombTimer;
+        private bool _bombTicking = false;
+        private bool _bombExploded = false;
 
         public Bomb(Player placedBy, Point position, int strength, int id) : base(Color.White, Color.Transparent, 3)
         {
             Id = id;
             Position = position;
             Font = Game.Font;
+            _bombTimer = new SadConsole.Timer(new TimeSpan(0, 0, 0, 0, 3000));
+            _bombTimer.TimerElapsed += _bombTimer_TimerElapsed;
             _placedBy = placedBy;
             _strength = strength;
             _grid = Game.GridScreen.Grid;
             _grid.GetValue(position.X, position.Y).HasBomb = true;
         }
 
+        private void _bombTimer_TimerElapsed(object sender, EventArgs e)
+        {
+            _bombTicking = false;
+            _bombTimer.IsPaused = true;
+
+            if (!_bombExploded)
+                Detonate();
+            else
+                CleanupFireAfter();
+        }
+
         public void StartDetonationPhase()
         {
-            // TODO
+            _bombTicking = true;
+        }
+
+        public override void Update(TimeSpan timeElapsed)
+        {
+            if (_bombTicking)
+                _bombTimer.Update(this, timeElapsed);
         }
 
         private List<Point> _cellPositions;
@@ -102,7 +125,6 @@ namespace Bomberman.Client.GameObjects
         {
             Animation[0].Foreground = Color.Transparent;
             Animation.IsDirty = true;
-            Parent = null;
 
             // Remove from bombs collection
             _grid.Bombs.Remove(Position);
@@ -122,6 +144,12 @@ namespace Bomberman.Client.GameObjects
             }
 
             Game.GridScreen.IsDirty = true;
+
+            _bombExploded = true;
+            _bombTimer.TimerAmount = new TimeSpan(0, 0, 0, 0, 1250);
+            _bombTimer.Restart();
+            _bombTicking = true;
+            _bombTimer.IsPaused = false;
         }
     }
 }
