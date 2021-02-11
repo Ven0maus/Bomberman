@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using System;
 
 namespace Bomberman.Client.GameObjects
 {
@@ -9,5 +10,12 @@ namespace Bomberman.Client.GameObjects
     {
         public BombermanBot(Point position, int id, Color color) : base(position, id, color, false)
         { }
+
+        public override void Update(TimeSpan timeElapsed)
+        {
+            base.Update(timeElapsed);
+
+            // TODO: Add AI processing logic each frame
+        }
     }
 }
