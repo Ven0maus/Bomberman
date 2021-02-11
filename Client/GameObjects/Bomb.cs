@@ -136,7 +136,8 @@ namespace Bomberman.Client.GameObjects
             var bombLocation = _grid.GetValue(Position.X, Position.Y);
             bombLocation.HasBomb = false;
 
-            Game.Player.BombsPlaced--;
+            if (Game.Singleplayer)
+                Game.Player.BombsPlaced--;
 
             // Remove from bombs collection
             _grid.Bombs.Remove(Position);
