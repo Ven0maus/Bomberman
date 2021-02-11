@@ -11,6 +11,7 @@ namespace Bomberman.Client.GameObjects
         // Powerups
         public int MaxBombs = 1;
         public int BombStrength = 1;
+        public int SecondsInvincible { get; private set; }
         public bool Alive { get; private set; }
         public int BombsPlaced { get; set; }
         public bool RequestedMovement { get; set; }
@@ -22,6 +23,11 @@ namespace Bomberman.Client.GameObjects
         public int Kills = 0;
 
         private int _bombCounter = 0;
+
+        public bool IsInvincible
+        {
+            get { return SecondsInvincible > 0; }
+        }
 
         public Player(Point position, int id, Color color, bool controllable = true) : base(Color.White, Color.Transparent, 18)
         {
@@ -75,6 +81,8 @@ namespace Bomberman.Client.GameObjects
             }
         }
 
+        private double _timeSinceDeath = 0d;
+        private bool _deathProcessed = false;
         public void StartDeadAnimation()
         {
             Alive = false;
@@ -85,7 +93,8 @@ namespace Bomberman.Client.GameObjects
             };
 
             // Also show it in the player overview
-            Game.GridScreen.PlayerKilled(this);
+            if (!Game.Singleplayer)
+                Game.GridScreen.PlayerKilled(this);
 
             IsVisible = false;
             IsFocused = false;
@@ -105,8 +114,15 @@ namespace Bomberman.Client.GameObjects
             _timeSinceLastBlink = 0;
         }
 
+        public void BecomeInvincible()
+        {
+            SecondsInvincible = 10;
+            StartBlinkingAnimation();
+        }
+
         private const double _blinkInterval = 0.5d * 1000;
         private double _timeSinceLastBlink = 0d;
+        private double _timeSinceLastSecond = 0d;
         public override void Update(TimeSpan timeElapsed)
         {
             base.Update(timeElapsed);
@@ -123,6 +139,37 @@ namespace Bomberman.Client.GameObjects
                     Animation.IsDirty = true;
                 }
             }
+
+            if (Game.Singleplayer)
+            {
+                if (Alive)
+                {
+                    if (SecondsInvincible > 0)
+                    {
+                        _timeSinceLastSecond += timeElapsed.Milliseconds;
+                        if (_timeSinceLastSecond >= 1000)
+                        {
+                            _timeSinceLastSecond = 0;
+                            SecondsInvincible--;
+
+                            if (SecondsInvincible == 0)
+                            {
+                                StopBlinkingAnimation();
+                            }
+                        }
+                    }
+                }
+                else if (!_deathProcessed)
+                {
+                    _timeSinceDeath += timeElapsed.Milliseconds;
+                    if (_timeSinceDeath >= 2000)
+                    {
+                        _deathProcessed = true;
+                        _timeSinceDeath = 0;
+                        Game.Reset();
+                    }
+                }
+            }
         }
 
         private bool _walkedFirstTime = false;
@@ -132,6 +179,13 @@ namespace Bomberman.Client.GameObjects
             if (!Game.Singleplayer) return;
             if (Game.GridScreen.Grid.CanMove(position.X, position.Y))
             {
+                if (Game.GridScreen.Grid.GetValue(position.X, position.Y).HasFire && !Game.Player.IsInvincible)
+                {
+                    Position = position;
+                    StartDeadAnimation();
+                    return;
+                }
+
                 Game.GridScreen.Grid.CheckPowerup(position);
                 Position = position;
             }

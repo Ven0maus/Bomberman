@@ -144,6 +144,15 @@ namespace Bomberman.Client.GameObjects
             // Remove from bombs collection
             foreach (var pos in GetCellPositions())
             {
+                // Game over check
+                if (Game.Singleplayer)
+                {
+                    if (Game.Player.Position == pos && !Game.Player.IsInvincible)
+                    {
+                        Game.Player.StartDeadAnimation();
+                    }
+                }
+
                 var cell = _grid.GetValue(pos.X, pos.Y);
 
                 // Delete existing power ups in this location

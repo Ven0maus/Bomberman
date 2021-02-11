@@ -84,6 +84,15 @@ namespace Bomberman.Client
             }
         }
 
+        internal static void Reset()
+        {
+            GridScreen.IsVisible = false;
+            GridScreen.IsFocused = false;
+            MainMenuScreen.IsVisible = true;
+            MainMenuScreen.IsFocused = true;
+            Global.CurrentScreen = MainMenuScreen;
+        }
+
         public static void Update(GameTime gameTime)
         {
             // Will be null for single player games

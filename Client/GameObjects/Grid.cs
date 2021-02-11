@@ -237,8 +237,7 @@ namespace Bomberman.Client.GameObjects
                     Game.Player.BombStrength++;
                     break;
                 case PowerUp.Invincibility:
-                    // TODO:
-                    //Game.Player.StartInvincibility();
+                    Game.Player.BecomeInvincible();
                     break;
                 default:
                     break;
