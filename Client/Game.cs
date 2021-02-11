@@ -63,12 +63,12 @@ namespace Bomberman.Client
             Global.CurrentScreen = MainMenuScreen = new MainMenuScreen(GameWidth, GameHeight);
         }
 
-        public static void InitializeGameScreen(bool multiplayer)
+        public static void InitializeGameScreen()
         {
             Global.CurrentScreen = GridScreen = new GridScreen(GridWidth, GridHeight, Font);
             GridScreen.IsFocused = true;
 
-            if (multiplayer)
+            if (!Game.Singleplayer)
             {
                 ClientWaitingLobby.IsVisible = false;
                 ClientWaitingLobby.IsFocused = false;
