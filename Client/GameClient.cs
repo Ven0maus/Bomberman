@@ -391,7 +391,7 @@ namespace Bomberman.Client
         private Task HandleGameStart(string message)
         {
             Game.ClientWaitingLobby.StopCountdown();
-            Game.InitializeGameScreen(true);
+            Game.InitializeGameScreen();
             return Task.CompletedTask;
         }
 

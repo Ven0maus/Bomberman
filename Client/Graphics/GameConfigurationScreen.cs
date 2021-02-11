@@ -84,7 +84,7 @@ __________              ___.
 
         private void StartGameButton_Click(object sender, System.EventArgs e)
         {
-            Game.InitializeGameScreen(false);
+            Game.InitializeGameScreen();
         }
 
         private void BackButton_Click(object sender, System.EventArgs e)

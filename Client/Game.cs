@@ -68,7 +68,7 @@ namespace Bomberman.Client
             Global.CurrentScreen = GridScreen = new GridScreen(GridWidth, GridHeight, Font);
             GridScreen.IsFocused = true;
 
-            if (!Game.Singleplayer)
+            if (!Singleplayer)
             {
                 ClientWaitingLobby.IsVisible = false;
                 ClientWaitingLobby.IsFocused = false;
