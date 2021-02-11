@@ -3,31 +3,33 @@ using Bomberman.Client.Graphics;
 using Microsoft.Xna.Framework;
 using SadConsole;
 using System;
+using System.Collections.Generic;
 
 namespace Bomberman.Client
 {
     public class Game
     {
-        public static GameClient Client { get; set; }
+        internal static GameClient Client { get; set; }
 
         public const int GameWidth = 145;
         public const int GameHeight = 45;
         public const int GridWidth = 15;
         public const int GridHeight = 15;
 
-        public static bool Singleplayer { get; set; }
+        internal static bool Singleplayer { get; set; }
 
-        public static Random Random { get; private set; } = new Random();
+        internal static Random Random { get; private set; } = new Random();
 
-        public static Font Font { get; private set; }
+        internal static Font Font { get; private set; }
 
-        public static GridScreen GridScreen { get; set; }
-        public static MainMenuScreen MainMenuScreen { get; private set; }
-        public static ClientWaitingLobby ClientWaitingLobby { get; set; }
+        internal static GridScreen GridScreen { get; set; }
+        internal static MainMenuScreen MainMenuScreen { get; private set; }
+        internal static ClientWaitingLobby ClientWaitingLobby { get; set; }
         /// <summary>
         /// Can only be accessed in a singleplayer game
         /// </summary>
-        public static Player Player { get; set; }
+        internal static Player Player { get; set; }
+        internal static List<BombermanBot> Bots { get; set; }
 
         private static void Main()
         {
@@ -63,7 +65,7 @@ namespace Bomberman.Client
             Global.CurrentScreen = MainMenuScreen = new MainMenuScreen(GameWidth, GameHeight);
         }
 
-        public static void InitializeGameScreen()
+        internal static void InitializeGameScreen()
         {
             Global.CurrentScreen = GridScreen = new GridScreen(GridWidth, GridHeight, Font);
             GridScreen.IsFocused = true;
@@ -81,7 +83,13 @@ namespace Bomberman.Client
                     Parent = GridScreen
                 };
 
-                // TODO: Initialize AI bots
+                // TODO: Initialize AI bots from screen interface options
+                Bots = new List<BombermanBot>();
+                for (int i=0; i < 3; i++)
+                {
+                    // 3 bots for testing
+                    Bots.Add(new BombermanBot(GridScreen.Grid.GetAvailableSpawnPosition(), i + 1, GridScreen.Grid.GetAvailableColor()) { Parent = GridScreen });
+                }
 
                 // Uncover tiles around the player only to show where he has spawned
                 GridScreen.Grid.UncoverTilesFromDarkness(Player.Position);
@@ -90,6 +98,13 @@ namespace Bomberman.Client
 
         internal static void Reset()
         {
+            foreach (var bot in Bots)
+                bot.Parent = null; // This undraws them from the screen
+            // Reset variables and let them be cleared by gc
+            Bots = null;
+            Player = null;
+
+            // Move screen to main menu
             GridScreen.IsVisible = false;
             GridScreen.IsFocused = false;
             MainMenuScreen.IsVisible = true;
@@ -97,7 +112,7 @@ namespace Bomberman.Client
             Global.CurrentScreen = MainMenuScreen;
         }
 
-        public static void Update(GameTime gameTime)
+        internal static void Update(GameTime gameTime)
         {
             // Will be null for single player games
             Client?.Update(gameTime);
