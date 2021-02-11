@@ -84,7 +84,11 @@ namespace Bomberman.Client.GameObjects
         private double _timeSinceDeath = 0d;
         private bool _deathProcessed = false;
         public void StartDeadAnimation()
-        {
+        {            
+            // AI don't need to be processed like the player
+            if (Game.Singleplayer && !_controllable)
+                _deathProcessed = true;
+
             Alive = false;
 
             new DeathSign(Position, Color)
@@ -166,7 +170,10 @@ namespace Bomberman.Client.GameObjects
                     {
                         _deathProcessed = true;
                         _timeSinceDeath = 0;
-                        Game.Reset();
+
+                        // Reset only for the player, not for AI
+                        if (_controllable)
+                            Game.Reset();
                     }
                 }
             }
