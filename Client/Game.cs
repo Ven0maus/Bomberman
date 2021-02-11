@@ -80,6 +80,10 @@ namespace Bomberman.Client
                 {
                     Parent = GridScreen
                 };
+
+                // TODO: Initialize AI bots
+
+                // Uncover tiles around the player only to show where he has spawned
                 GridScreen.Grid.UncoverTilesFromDarkness(Player.Position);
             }
         }
